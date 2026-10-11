@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="sl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f4f1ea">
+  <title>Kontakt | Sprehajanje kužkov</title>
+  <meta name="description" content="Kontakt za sprehajanje kužkov.">
+  <style>
+    :root{
+      --bg:#f4f1ea;
+      --card:#fffefa;
+      --text:#1e2924;
+      --muted:#69736e;
+      --line:#ddd9d0;
+      --button:#1f3029;
+      --button-hover:#15231d;
+      --soft:#efebe3;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text)}
+    body{
+      min-height:100svh;
+      display:grid;
+      place-items:center;
+      padding:22px;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      -webkit-font-smoothing:antialiased;
+    }
+    main{
+      width:min(100%,420px);
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:28px;
+      padding:30px 22px 22px;
+      box-shadow:0 18px 60px rgba(31,48,41,.08);
+    }
+    .top{text-align:center;padding:2px 10px 24px}
+    .paw{
+      width:54px;height:54px;
+      margin:0 auto 15px;
+      border-radius:17px;
+      background:var(--soft);
+      display:grid;
+      place-items:center;
+    }
+    .paw svg{width:28px;height:28px}
+    h1{
+      margin:0;
+      font-size:30px;
+      line-height:1.08;
+      letter-spacing:-.7px;
+      font-weight:800;
+    }
+    .buttons{display:grid;gap:10px}
+    .action{
+      min-height:56px;
+      display:flex;
+      align-items:center;
+      gap:14px;
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:0 17px;
+      background:#fff;
+      color:var(--text);
+      text-decoration:none;
+      font:inherit;
+      font-weight:700;
+      font-size:16px;
+      cursor:pointer;
+      text-align:left;
+      transition:transform .08s ease,background .12s ease,border-color .12s ease;
+    }
+    .action:hover{background:#faf9f5;border-color:#cbc6bc}
+    .action:active{transform:scale(.985)}
+    .action.primary{background:var(--button);border-color:var(--button);color:#fff}
+    .action.primary:hover{background:var(--button-hover);border-color:var(--button-hover)}
+    .action svg{width:22px;height:22px;flex:0 0 22px}
+    .action .label{flex:1}
+    .action.disabled{
+      opacity:.42;
+      cursor:not-allowed;
+      pointer-events:none;
+    }
+    .divider{
+      height:1px;
+      background:var(--line);
+      margin:4px 0;
+    }
+    #shareStatus{
+      min-height:18px;
+      margin:11px 4px 0;
+      color:var(--muted);
+      font-size:13px;
+      text-align:center;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div class="paw" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <ellipse cx="7" cy="7" rx="2.1" ry="2.8"/>
+        <ellipse cx="17" cy="7" rx="2.1" ry="2.8"/>
+        <ellipse cx="4.6" cy="12" rx="2" ry="2.6"/>
+        <ellipse cx="19.4" cy="12" rx="2" ry="2.6"/>
+        <path d="M12 10.2c-3.8 0-6.4 3.1-6.4 6 0 2.2 1.7 3.6 3.8 3.6 1 0 1.7-.4 2.6-.4s1.6.4 2.6.4c2.1 0 3.8-1.4 3.8-3.6 0-2.9-2.6-6-6.4-6z"/>
+      </svg>
+    </div>
+    <h1>Kontakt</h1>
+  </div>
+
+  <div class="buttons">
+    <a id="callBtn" class="action primary disabled" href="#" aria-disabled="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.78.62 2.63a2 2 0 0 1-.45 2.11L8 9.73a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.85.29 1.73.5 2.63.62A2 2 0 0 1 22 16.92z"/></svg>
+      <span class="label">Pokliči</span>
+    </a>
+
+    <a id="smsBtn" class="action disabled" href="#" aria-disabled="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
+      <span class="label">SMS</span>
+    </a>
+
+    <a id="whatsappBtn" class="action disabled" href="#" aria-disabled="true">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 3.5A11.8 11.8 0 0 0 12.1 0C5.6 0 .3 5.3.3 11.8c0 2.1.5 4.1 1.6 5.9L.2 24l6.4-1.7a11.8 11.8 0 0 0 5.6 1.4h.1c6.5 0 11.8-5.3 11.8-11.8 0-3.2-1.3-6.1-3.6-8.4zM12.2 21.7a9.8 9.8 0 0 1-5-1.4l-.4-.2-3.8 1 1-3.7-.2-.4a9.8 9.8 0 1 1 8.4 4.7zm5.4-7.3c-.3-.1-1.7-.8-2-.9-.3-.1-.5-.1-.7.2s-.8.9-1 1.1c-.2.2-.4.2-.7.1-1.7-.8-2.8-1.5-4-3.4-.3-.5.3-.5.8-1.6.1-.2 0-.4 0-.6l-.9-2.1c-.2-.5-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.2 1.2-1.2 2.9s1.2 3.4 1.4 3.6c.2.2 2.4 3.7 5.9 5.2 2.2.9 3.1 1 4.2.8.7-.1 1.7-.7 1.9-1.4.2-.7.2-1.3.2-1.4-.1-.2-.4-.3-.7-.4z"/></svg>
+      <span class="label">WhatsApp</span>
+    </a>
+
+    <a id="viberBtn" class="action disabled" href="#" aria-disabled="true">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.4 0C5.5 0 1.5 3.5 1.5 9.1c0 2.9 1.1 5.3 3 7.1L3.4 22l5.3-2.7c.9.2 1.8.3 2.7.3 5.9 0 9.9-3.5 9.9-9.1S17.3 0 11.4 0zm5.2 14.1c-.4.9-1.8 1.7-2.6 1.8-.7.1-1.5.2-4.4-1-3.7-1.6-6.1-5.4-6.3-5.6-.2-.2-1.5-2-1.5-3.8s.9-2.7 1.3-3.1c.3-.3.7-.4 1-.4h.7c.2 0 .5 0 .7.6.3.7 1 2.4 1.1 2.6.1.2.2.5 0 .7-.1.3-.2.4-.4.6-.2.2-.4.5-.6.7-.2.2-.4.4-.2.8.2.4.9 1.5 2 2.4 1.4 1.2 2.5 1.6 2.9 1.8.4.2.6.2.8-.1.2-.3 1-1.2 1.3-1.6.3-.4.5-.3.9-.2.4.1 2.3 1.1 2.7 1.3.4.2.7.3.8.5.1.2.1 1-.2 1.9z"/></svg>
+      <span class="label">Viber</span>
+    </a>
+
+    <a class="action" href="mailto:sprehodkuzkov.lj@gmail.com?subject=Sprehajanje%20ku%C5%BEka">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="m22 6-10 7L2 6"/></svg>
+      <span class="label">E-pošta</span>
+    </a>
+
+    <div class="divider"></div>
+
+    <button id="shareBtn" class="action" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg>
+      <span class="label">Deli</span>
+    </button>
+  </div>
+  <div id="shareStatus" aria-live="polite"></div>
+</main>
+
+<script>
+  // Vpiši številko v mednarodni obliki, npr. +38640123456.
+  // Dokler je prazna, so telefonski gumbi varno onemogočeni.
+  const PHONE_E164 = "";
+
+  function enablePhoneLinks() {
+    const normalized = PHONE_E164.trim();
+    if (!normalized) return;
+
+    const digits = normalized.replace(/\D/g, "");
+    const encoded = encodeURIComponent(normalized);
+
+    const links = {
+      callBtn: "tel:" + normalized,
+      smsBtn: "sms:" + normalized,
+      whatsappBtn: "https://wa.me/" + digits,
+      viberBtn: "viber://chat?number=" + encoded
+    };
+
+    Object.entries(links).forEach(([id, href]) => {
+      const el = document.getElementById(id);
+      el.href = href;
+      el.classList.remove("disabled");
+      el.removeAttribute("aria-disabled");
+    });
+  }
+
+  enablePhoneLinks();
+
+  const shareBtn = document.getElementById("shareBtn");
+  const shareStatus = document.getElementById("shareStatus");
+
+  shareBtn.addEventListener("click", async () => {
+    const data = {
+      title: "Kontakt",
+      url: window.location.href
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(data);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        shareStatus.textContent = "Povezava kopirana.";
+        setTimeout(() => shareStatus.textContent = "", 2200);
+      }
+    } catch (err) {
+      if (err && err.name === "AbortError") return;
+      shareStatus.textContent = "Povezave ni bilo mogoče deliti.";
+      setTimeout(() => shareStatus.textContent = "", 2200);
+    }
+  });
+</script>
+</body>
+</html>
