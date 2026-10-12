@@ -91,6 +91,10 @@
       background:var(--line);
       margin:4px 0;
     }
+    #privacyControls{margin:16px 0 0;border-top:1px solid var(--line);padding-top:14px;color:var(--muted);font-size:12px;line-height:1.5}
+    #privacyControls p{margin:0 0 7px}
+    #privacyControls button{background:transparent;color:var(--text);font:inherit;font-weight:650;border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;margin:2px 5px 0 0}
+    #privacyControls a{color:inherit}
     #shareStatus{
       min-height:18px;
       margin:11px 4px 0;
@@ -152,48 +156,147 @@
     </button>
   </div>
   <div id="shareStatus" aria-live="polite"></div>
+  <div id="privacyControls" aria-label="Nastavitve zasebnosti">
+    <p><strong>Statistika obiska:</strong> Štejemo odpiranja QR povezav.
+    Dodatni podatki o napravi in prepoznavanje ponovnih obiskov so prostovoljni.
+    Ne uporabljamo lokacije GPS, kamere ali mikrofona.</p>
+    <div id="privacyActions"></div>
+  </div>
 </main>
 
 <script>
-  const SCAN_API = "https://qr-pski-skenirano.cekluka.com/scan";
+  const SCAN_ORIGIN = "https://qr-pski-skenirano.cekluka.com";
+  const SCAN_API = SCAN_ORIGIN + "/scan";
   const POSTER_ID_RE = /^[A-Za-z0-9_-]{4,24}$/;
+  const BROWSER_ID_RE = /^[a-f0-9-]{36}$/;
+  const PRIVACY_CHOICE = "kuzki_analytics_consent";
+  const BROWSER_KEY = "kuzki_browser_id";
+  let latestScan = null;
+
+  // sendBeacon uses text/plain for strings: no CORS preflight/permission prompt.
+  function sendAnalytics(url, payload) {
+    const body = JSON.stringify(payload);
+    try {
+      if (navigator.sendBeacon && navigator.sendBeacon(url, body)) return;
+    } catch (_) { /* Fall back to fetch. */ }
+    try {
+      fetch(url, {
+        method: "POST",
+        mode: "no-cors",
+        keepalive: true,
+        cache: "no-store",
+        headers: {"Content-Type": "text/plain;charset=UTF-8"},
+        body
+      }).catch(() => {});
+    } catch (_) { /* Analytics must never block this contact page. */ }
+  }
+
+  function newRandomId() {
+    if (crypto && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+    if (crypto && typeof crypto.getRandomValues === "function") {
+      const bytes = crypto.getRandomValues(new Uint8Array(16));
+      bytes[6] = (bytes[6] & 15) | 64;
+      bytes[8] = (bytes[8] & 63) | 128;
+      const hex = [...bytes].map(x => x.toString(16).padStart(2, "0")).join("");
+      return hex.slice(0, 8) + "-" + hex.slice(8, 12) + "-" + hex.slice(12, 16)
+        + "-" + hex.slice(16, 20) + "-" + hex.slice(20);
+    }
+    return null;
+  }
+
+  function consentedBrowserId() {
+    try {
+      if (localStorage.getItem(PRIVACY_CHOICE) !== "yes") return null;
+      let id = localStorage.getItem(BROWSER_KEY);
+      if (!BROWSER_ID_RE.test(id || "")) {
+        id = newRandomId();
+        if (!id) return null;
+        localStorage.setItem(BROWSER_KEY, id);
+      }
+      return id;
+    } catch (_) { return null; }
+  }
+
+  // Optional device properties are only read after explicit opt-in.
+  function allowedDeviceDetails() {
+    let timezone = "";
+    try { timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (_) {}
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    return {
+      language: navigator.language || "",
+      timezone,
+      platform: navigator.platform || "",
+      screen: (screen.width || 0) + "x" + (screen.height || 0),
+      viewport: innerWidth + "x" + innerHeight,
+      pixel_ratio: devicePixelRatio || 1,
+      color_depth: screen.colorDepth || 0,
+      touch_points: navigator.maxTouchPoints || 0,
+      cores: navigator.hardwareConcurrency || 0,
+      memory_gb: navigator.deviceMemory || "",
+      network_type: connection?.effectiveType || ""
+    };
+  }
+
+  function consentPayload() {
+    const id = consentedBrowserId();
+    return id ? {consent: true, browser_id: id, details: allowedDeviceDetails()} : {};
+  }
 
   function recordPosterScan() {
     const params = new URLSearchParams(window.location.search);
     const posterId = params.get("p");
     if (!posterId) return;
 
-    // Remove ?p=... immediately without reloading the page.
-    // Refreshing the page is now just "/" and will not count again.
+    // Do not count refresh as a second scan.
     history.replaceState(null, "", window.location.pathname || "/");
-
     if (!POSTER_ID_RE.test(posterId)) return;
 
-    const scanId = (window.crypto && crypto.randomUUID)
-      ? crypto.randomUUID()
-      : Date.now().toString(36) + Math.random().toString(36).slice(2);
-
-    const url = SCAN_API
-      + "?p=" + encodeURIComponent(posterId)
-      + "&s=" + encodeURIComponent(scanId);
-
-    try {
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon(url, "");
-      } else {
-        fetch(url, {
-          method: "POST",
-          mode: "no-cors",
-          keepalive: true,
-          cache: "no-store"
-        }).catch(() => {});
-      }
-    } catch (_) {
-      // Tracking must never block the contact page.
-    }
+    const scanId = newRandomId() ||
+      Date.now().toString(36) + Math.random().toString(36).slice(2);
+    latestScan = {posterId, scanId};
+    sendAnalytics(SCAN_API + "?p=" + encodeURIComponent(posterId)
+      + "&s=" + encodeURIComponent(scanId), consentPayload());
   }
 
   recordPosterScan();
+
+  const privacyActions = document.getElementById("privacyActions");
+  function privacyButton(label, handler) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    button.addEventListener("click", handler);
+    privacyActions.appendChild(button);
+  }
+  function updatePrivacyButtons() {
+    privacyActions.replaceChildren();
+    if (consentedBrowserId()) {
+      privacyButton("Prekliči soglasje in izbriši podatke naprave", () => {
+        const id = consentedBrowserId();
+        if (id) sendAnalytics(SCAN_ORIGIN + "/privacy/forget", {browser_id: id});
+        try {
+          localStorage.removeItem(BROWSER_KEY);
+          localStorage.setItem(PRIVACY_CHOICE, "no");
+        } catch (_) {}
+        updatePrivacyButtons();
+      });
+    } else {
+      privacyButton("Dovoli anonimno prepoznavanje obiskov", () => {
+        try { localStorage.setItem(PRIVACY_CHOICE, "yes"); } catch (_) {}
+        const id = consentedBrowserId();
+        if (id && latestScan) {
+          sendAnalytics(SCAN_API + "/enrich?p=" + encodeURIComponent(latestScan.posterId)
+            + "&s=" + encodeURIComponent(latestScan.scanId), consentPayload());
+        }
+        updatePrivacyButtons();
+      });
+      privacyButton("Brez dodatne analitike", () => {
+        try { localStorage.setItem(PRIVACY_CHOICE, "no"); } catch (_) {}
+        updatePrivacyButtons();
+      });
+    }
+  }
+  updatePrivacyButtons();
 
   // Vpiši številko v mednarodni obliki, npr. +38640123456.
   // Dokler je prazna, so telefonski gumbi varno onemogočeni.
