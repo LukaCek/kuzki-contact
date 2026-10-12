@@ -11,7 +11,7 @@ https://kuski.qd.je/?p=a1b2c3
 Ob odprtju stran:
 1. prebere parameter `p`,
 2. takoj odstrani query iz URL-ja brez novega page loada,
-3. v ozadju poslje en POST na `https://scan.kuski.qd.je/scan`.
+3. v ozadju poslje en POST na `https://qr-pski-skenirano.cekluka.com/scan`.
 
 Zato refresh po prvem odprtju ne steje novega skena. Vsak scan ima se nakljucni `scan_id`, zato tudi ponovljen beacon istega odpiranja ni podvojen.
 
@@ -33,7 +33,7 @@ V DigitalPlat DNS za cono `kuski.qd.je` dodaj:
 - Value: javni IPv4 Oracle VPS
 - TTL: `300`
 
-To ustvari `scan.kuski.qd.je`.
+To ustvari `qr-pski-skenirano.cekluka.com`.
 
 ### 2. Backend
 
@@ -61,7 +61,7 @@ API je na host portu `8787`.
 
 Dodaj Proxy Host:
 
-- Domain: `scan.kuski.qd.je`
+- Domain: `qr-pski-skenirano.cekluka.com`
 - Forward Host/IP: Oracle VPS host, dosegljiv iz NPM
 - Forward Port: `8787`
 - Scheme: `http`
@@ -75,7 +75,7 @@ Porta 8787 ni treba odpirati v OCI ingress pravilih, ce ga uporablja samo lokaln
 Na voljo je Caddy override. Port 80 in 443 morata biti prosta in dovoljena v OCI firewallu:
 
 ```bash
-SCAN_DOMAIN=scan.kuski.qd.je docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d --build
+SCAN_DOMAIN=qr-pski-skenirano.cekluka.com docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d --build
 ```
 
 Caddy sam pridobi TLS certifikat.
@@ -83,7 +83,7 @@ Caddy sam pridobi TLS certifikat.
 ## Test
 
 ```bash
-curl https://scan.kuski.qd.je/health
+curl https://qr-pski-skenirano.cekluka.com/health
 ```
 
 Pricakovano:
@@ -95,13 +95,13 @@ Pricakovano:
 Testni scan:
 
 ```bash
-curl -X POST "https://scan.kuski.qd.je/scan?p=test12&s=12345678-test"
+curl -X POST "https://qr-pski-skenirano.cekluka.com/scan?p=test12&s=12345678-test"
 ```
 
 Statistika:
 
 ```
-https://scan.kuski.qd.je/stats
+https://qr-pski-skenirano.cekluka.com/stats
 ```
 
 Browser zahteva HTTP Basic uporabnika in geslo iz `.env`.
@@ -109,7 +109,7 @@ Browser zahteva HTTP Basic uporabnika in geslo iz `.env`.
 CSV:
 
 ```
-https://scan.kuski.qd.je/stats.csv
+https://qr-pski-skenirano.cekluka.com/stats.csv
 ```
 
 ## Nov poster ID
@@ -126,3 +126,25 @@ URL: https://kuski.qd.je/?p=a1b2c3
 ```
 
 Skript zapisuje lokalno mapiranje ID -> lokacija v `posters.csv`. Datoteka je ignorirana z Gitom, da fizicnih lokacij ne objavljas v javnem repozitoriju.
+
+## Posamezni zahtevki
+
+Odpri zaščiteno statistiko na `https://qr-pski-skenirano.cekluka.com/stats`.
+Na zavihku **Posamezni zahtevki** (`/stats/requests`) so vsi
+`POST /scan` zahtevki, tudi podvojeni in neveljavni, po 50 na stran,
+z najnovejšimi na vrhu. Beležijo se čas (UTC), ID plakata, naključni
+ID zahtevka, rezultat in HTTP status. IP naslovov, uporabniških agentov
+in prijavnih podatkov ne beležimo v aplikacijski bazi.
+
+Ob prvi uporabi po posodobitvi se prej obstoječi uspešni skeni
+samodejno vnesejo v zgodovino zahtevkov. Preteklih podvojenih/neveljavnih
+zahtevkov ni mogoče rekonstruirati. Zahtevki, ki niso `POST /scan`
+(npr. `/health`, `/stats`), se ne beležijo.
+
+Za posodobitev:
+```bash
+cd ~/docker/kuzki-contact
+git pull --ff-only
+cd backend
+docker compose up -d --build
+```

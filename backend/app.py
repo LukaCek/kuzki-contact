@@ -6,6 +6,7 @@ import re
 import sqlite3
 from datetime import datetime, timezone
 from functools import wraps
+from html import escape
 
 from flask import Flask, Response, jsonify, request
 
@@ -23,20 +24,61 @@ def db():
     conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS scans (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            poster_id TEXT NOT NULL,
-            scan_id TEXT NOT NULL UNIQUE,
-            scanned_at INTEGER NOT NULL
+
+    # Serialize first-time migration and import earlier counted scans into
+    # the request history without losing existing aggregate data.
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS scans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                poster_id TEXT NOT NULL,
+                scan_id TEXT NOT NULL UNIQUE,
+                scanned_at INTEGER NOT NULL
+            )
+            """
         )
-        """
-    )
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_scans_poster_time "
-        "ON scans(poster_id, scanned_at)"
-    )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_scans_poster_time "
+            "ON scans(poster_id, scanned_at)"
+        )
+        already_has_log = conn.execute(
+            "SELECT 1 FROM sqlite_master "
+            "WHERE type = 'table' AND name = 'scan_requests'"
+        ).fetchone() is not None
+
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS scan_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                poster_id TEXT NOT NULL,
+                scan_id TEXT NOT NULL,
+                requested_at INTEGER NOT NULL,
+                result TEXT NOT NULL,
+                http_status INTEGER NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_scan_requests_time "
+            "ON scan_requests(requested_at DESC, id DESC)"
+        )
+        if not already_has_log:
+            # Older accepted scans predate per-request logging.
+            conn.execute(
+                """
+                INSERT INTO scan_requests
+                    (poster_id, scan_id, requested_at, result, http_status)
+                SELECT poster_id, scan_id, scanned_at, 'counted', 204
+                FROM scans ORDER BY id
+                """
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        conn.close()
+        raise
     return conn
 
 
@@ -94,26 +136,37 @@ def health():
 def scan():
     poster_id = (request.args.get("p") or "").strip()
     scan_id = (request.args.get("s") or "").strip()
-
-    if not POSTER_ID_RE.fullmatch(poster_id):
-        return Response(status=400)
-    if not SCAN_ID_RE.fullmatch(scan_id):
-        return Response(status=400)
-
     now = int(datetime.now(timezone.utc).timestamp())
 
-    with db() as conn:
-        try:
-            conn.execute(
-                "INSERT INTO scans (poster_id, scan_id, scanned_at) VALUES (?, ?, ?)",
-                (poster_id, scan_id, now),
-            )
-            conn.commit()
-        except sqlite3.IntegrityError:
-            # Same beacon retried: do not double count.
-            pass
+    # Save each incoming POST separately, including rejected and duplicate
+    # requests. Do not log IP addresses, user agents, or auth credentials.
+    if not POSTER_ID_RE.fullmatch(poster_id):
+        result, status = "invalid_poster", 400
+    elif not SCAN_ID_RE.fullmatch(scan_id):
+        result, status = "invalid_scan", 400
+    else:
+        result, status = "counted", 204
 
-    return Response(status=204)
+    with db() as conn:
+        if result == "counted":
+            try:
+                conn.execute(
+                    "INSERT INTO scans (poster_id, scan_id, scanned_at) VALUES (?, ?, ?)",
+                    (poster_id, scan_id, now),
+                )
+            except sqlite3.IntegrityError:
+                result = "duplicate"
+
+        conn.execute(
+            """
+            INSERT INTO scan_requests
+                (poster_id, scan_id, requested_at, result, http_status)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (poster_id[:80], scan_id[:80], now, result, status),
+        )
+
+    return Response(status=status)
 
 
 def stats_rows():
@@ -144,6 +197,36 @@ def fmt_time(ts):
     return datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
 
+STATS_CSS = (
+    "<style>"
+    "body{font-family:system-ui,sans-serif;max-width:1000px;margin:34px auto;"
+    "padding:0 16px;color:#18231e}"
+    "table{border-collapse:collapse;width:100%;font-size:14px}"
+    "th,td{padding:10px 12px;border-bottom:1px solid #ddd;text-align:left}"
+    "th{background:#f5f3ee}code{font-size:.95em;overflow-wrap:anywhere}"
+    "a{color:#173e2e}"
+    ".tabs{display:flex;gap:8px;margin:0 0 24px;flex-wrap:wrap}"
+    ".tabs a{display:inline-block;padding:10px 15px;border-radius:10px;"
+    "text-decoration:none;background:#f3f1ed}"
+    ".tabs a.active{background:#173e2e;color:#fff}"
+    ".table-wrap{overflow-x:auto}"
+    ".muted{color:#647069}"
+    ".pager{display:flex;gap:15px;margin:18px 0;align-items:center}"
+    "</style>"
+)
+
+
+def stats_tabs(active):
+    summary = ' class="active"' if active == "summary" else ""
+    requests_tab = ' class="active"' if active == "requests" else ""
+    return (
+        '<nav class="tabs" aria-label="Statistika">'
+        f'<a href="/stats"{summary}>Pregled</a>'
+        f'<a href="/stats/requests"{requests_tab}>Posamezni zahtevki</a>'
+        '</nav>'
+    )
+
+
 @app.get("/stats")
 @admin_required
 def stats():
@@ -154,13 +237,11 @@ def stats():
         "<!doctype html><meta charset='utf-8'>",
         "<meta name='viewport' content='width=device-width,initial-scale=1'>",
         "<title>Kuzki QR stats</title>",
-        "<style>",
-        "body{font-family:system-ui,sans-serif;max-width:900px;margin:40px auto;padding:0 16px;color:#18231e}",
-        "table{border-collapse:collapse;width:100%}th,td{padding:10px 12px;border-bottom:1px solid #ddd;text-align:left}",
-        "th{background:#f5f3ee}code{font-size:1.05em}a{color:#173e2e}",
-        "</style>",
+        STATS_CSS,
+        stats_tabs("summary"),
         f"<h1>QR skeni</h1><p>Skupaj: <strong>{total}</strong></p>",
         "<p><a href='/stats.csv'>Prenesi CSV</a></p>",
+        '<div class="table-wrap">',
         "<table><thead><tr><th>Plakat ID</th><th>Skeni</th><th>24 h</th><th>Prvi</th><th>Zadnji</th></tr></thead><tbody>",
     ]
 
@@ -175,7 +256,79 @@ def stats():
             "</tr>"
         )
 
-    body.append("</tbody></table>")
+    body.append("</tbody></table></div>")
+    return Response("".join(body), mimetype="text/html")
+
+
+
+@app.get("/stats/requests")
+@admin_required
+def stats_requests():
+    per_page = 50
+    try:
+        requested_page = max(1, int(request.args.get("page", "1")))
+    except (ValueError, TypeError):
+        requested_page = 1
+
+    with db() as conn:
+        total = conn.execute("SELECT COUNT(*) FROM scan_requests").fetchone()[0]
+        page_count = max(1, (total + per_page - 1) // per_page)
+        page = min(requested_page, page_count)
+        rows = conn.execute(
+            """
+            SELECT id, poster_id, scan_id, requested_at, result, http_status
+            FROM scan_requests
+            ORDER BY requested_at DESC, id DESC
+            LIMIT ? OFFSET ?
+            """,
+            (per_page, (page - 1) * per_page),
+        ).fetchall()
+
+    labels = {
+        "counted": "Nov sken",
+        "duplicate": "Podvojen",
+        "invalid_poster": "Napačen ID plakata",
+        "invalid_scan": "Napačen ID zahtevka",
+    }
+
+    body = [
+        "<!doctype html><meta charset='utf-8'>",
+        "<meta name='viewport' content='width=device-width,initial-scale=1'>",
+        "<title>Posamezni QR zahtevki</title>",
+        STATS_CSS,
+        stats_tabs("requests"),
+        f"<h1>Posamezni zahtevki</h1><p>Skupaj zabeleženih: <strong>{total}</strong></p>",
+        "<p class='muted'>Vsaka zahteva POST /scan je samostojna vrstica. "
+        "Podvojitve se ne prištejejo k skenom. Časi so prikazani v UTC. "
+        "IP naslovi se ne shranjujejo.</p>",
+        '<div class="table-wrap"><table><thead><tr>'
+        "<th>Čas</th><th>Plakat ID</th><th>ID zahtevka</th>"
+        "<th>Rezultat</th><th>HTTP</th>"
+        "</tr></thead><tbody>",
+    ]
+
+    for row in rows:
+        body.append(
+            "<tr>"
+            f"<td>{fmt_time(row['requested_at'])}</td>"
+            f"<td><code>{escape(row['poster_id'])}</code></td>"
+            f"<td><code>{escape(row['scan_id'])}</code></td>"
+            f"<td>{labels.get(row['result'], escape(row['result']))}</td>"
+            f"<td>{row['http_status']}</td>"
+            "</tr>"
+        )
+
+    if not rows:
+        body.append("<tr><td colspan='5'>Ni zahtevkov.</td></tr>")
+
+    body.append("</tbody></table></div>")
+    body.append('<nav class="pager" aria-label="Strani zahtevkov">')
+    if page > 1:
+        body.append(f'<a href="/stats/requests?page={page-1}">← Prejšnja</a>')
+    body.append(f"<span>Stran {page} / {page_count}</span>")
+    if page < page_count:
+        body.append(f'<a href="/stats/requests?page={page+1}">Naslednja →</a>')
+    body.append("</nav>")
     return Response("".join(body), mimetype="text/html")
 
 
