@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#f4f1ea">
+  <meta name="referrer" content="no-referrer">
   <title>Kontakt | Sprehajanje kužkov</title>
   <meta name="description" content="Kontakt za sprehajanje kužkov.">
   <style>
@@ -154,6 +155,46 @@
 </main>
 
 <script>
+  const SCAN_API = "https://scan.kuski.qd.je/scan";
+  const POSTER_ID_RE = /^[A-Za-z0-9_-]{4,24}$/;
+
+  function recordPosterScan() {
+    const params = new URLSearchParams(window.location.search);
+    const posterId = params.get("p");
+    if (!posterId) return;
+
+    // Remove ?p=... immediately without reloading the page.
+    // Refreshing the page is now just "/" and will not count again.
+    history.replaceState(null, "", window.location.pathname || "/");
+
+    if (!POSTER_ID_RE.test(posterId)) return;
+
+    const scanId = (window.crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : Date.now().toString(36) + Math.random().toString(36).slice(2);
+
+    const url = SCAN_API
+      + "?p=" + encodeURIComponent(posterId)
+      + "&s=" + encodeURIComponent(scanId);
+
+    try {
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(url, "");
+      } else {
+        fetch(url, {
+          method: "POST",
+          mode: "no-cors",
+          keepalive: true,
+          cache: "no-store"
+        }).catch(() => {});
+      }
+    } catch (_) {
+      // Tracking must never block the contact page.
+    }
+  }
+
+  recordPosterScan();
+
   // Vpiši številko v mednarodni obliki, npr. +38640123456.
   // Dokler je prazna, so telefonski gumbi varno onemogočeni.
   const PHONE_E164 = "+38670337710";
