@@ -496,27 +496,21 @@ def stats_posters():
         "<title>Plakati in oznake</title>", STATS_CSS, stats_tabs("posters"),
         "<h1>Poimenovanje plakatov</h1>",
         "<p class='muted'>Ime lahko spremeniš, ne da bi spreminjal QR-kodo.</p>",
-        '<div class="panel"><h2>Dodaj plakat</h2>',
-        '<form method="post" action="/stats/posters" class="inline">',
-        f'<input type="hidden" name="csrf" value="{token}">',
-        '<label>ID (pusti prazno za naključen): ',
-        '<input name="poster_id" maxlength="24" placeholder="npr. a1b2c3"></label>',
-        '<label>Ime: <input name="label" required maxlength="80"',
-        ' placeholder="Knjižnica CTK"></label>',
-        '<button type="submit">Shrani</button></form></div>',
+        '<div class="panel">'
+        '<button type="button" id="open-flier-scanner">+ Dodaj flier</button>'
+        '<p class="muted">Vpiši ime lokacije in skeniraj QR-kodo na plakatu. '
+        'Skeniranje v administraciji ne poveča števila obiskov.</p></div>',
         '<div class="table-wrap"><table><thead><tr>',
-        '<th>Ime</th><th>ID in QR naslov</th><th>Skeni</th><th>Spremeni ime</th>',
+        '<th>Ime</th><th>QR ID</th><th>Skeni</th><th>Spremeni ime</th>',
         '</tr></thead><tbody>',
     ]
     for row in rows:
         code = escape(row["poster_id"])
         name = escape(row["label"])
-        url = "https://kuski.qd.je/?p=" + code
         body.append(
             "<tr>"
             f"<td><span class='label'>{name or '—'}</span></td>"
-            f'<td><code>{code}</code><div><a href="{url}" target="_blank" rel="noopener">'
-            "Odpri QR povezavo</a></div></td>"
+            f"<td><code>{code}</code></td>"
             f"<td>{row['scans']}</td>"
             '<td><form method="post" action="/stats/posters" class="inline">'
             f'<input type="hidden" name="csrf" value="{token}">'
@@ -528,6 +522,51 @@ def stats_posters():
     if not rows:
         body.append("<tr><td colspan='4'>Ni plakatov.</td></tr>")
     body.append("</tbody></table></div>")
+    body.extend([
+        '<style>'
+        '.flier-dialog{border:0;border-radius:18px;box-shadow:0 18px 90px #0003;'
+        'width:min(94vw,560px);max-height:92dvh;padding:22px;overflow:auto;'
+        'color:#18231e;font-family:system-ui,sans-serif}'
+        '.flier-dialog::backdrop{background:#0009}'
+        '.flier-dialog h2{margin:0 0 8px}'
+        '.flier-dialog p{line-height:1.5}'
+        '.flier-dialog input[type=text]{width:100%;margin:6px 0 14px;'
+        'min-height:42px;box-sizing:border-box}'
+        '.flier-dialog input[type=file]{width:100%;max-width:100%;margin:9px 0}'
+        '.flier-dialog details{max-width:100%;margin:14px 0}'
+        '.flier-dialog .actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}'
+        '.flier-dialog .secondary{background:#eee;color:#18231e}'
+        '#flier-reader{width:100%;margin:12px 0;overflow:hidden}'
+        '#flier-reader[hidden]{display:none!important}'
+        '#flier-scanner-status{min-height:18px}'
+        '</style>',
+        '<dialog id="flier-scanner-dialog" class="flier-dialog" '
+        'aria-labelledby="flier-modal-title">',
+        '<form method="post" action="/stats/posters" id="flier-scanner-form">',
+        f'<input type="hidden" name="csrf" value="{token}">',
+        '<input type="hidden" name="poster_id" id="flier-poster-id">',
+        '<h2 id="flier-modal-title">Dodaj flier</h2>',
+        '<p class="muted">1. Vpiši ime lokacije. 2. S kamero preberi QR-kodo '
+        'na plakatu. Ime se samodejno shrani brez odpiranja QR povezave.</p>',
+        '<label for="flier-name">Ime / lokacija</label>',
+        '<input type="text" id="flier-name" name="label" required maxlength="80" '
+        'placeholder="Knjižnica CTK" autocomplete="off">',
+        '<div class="actions"><button type="button" id="flier-open-camera">'
+        'Odpri kamero in skeniraj QR</button></div>',
+        '<div id="flier-reader" hidden></div>',
+        '<p id="flier-scanner-status" role="status" aria-live="polite"></p>',
+        '<details><summary>Če kamera ne dela: naloži fotografijo ali prilepi URL</summary>',
+        '<label for="flier-qr-image">Fotografija s QR-kodo</label>',
+        '<input id="flier-qr-image" type="file" accept="image/*">',
+        '<label for="flier-paste">Povezava iz QR-kode</label>',
+        '<input type="text" id="flier-paste" placeholder="https://kuski.qd.je/?p=a1b2c3">',
+        '<button type="button" id="flier-use-paste">Uporabi to povezavo</button>',
+        '</details>',
+        '<div class="actions"><button type="button" class="secondary" '
+        'id="flier-cancel">Prekliči</button></div>',
+        '</form></dialog>',
+        '<script src="/static/poster-scanner.js" defer></script>',
+    ])
     return Response("".join(body), mimetype="text/html")
 
 
