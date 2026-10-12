@@ -150,8 +150,10 @@ class PosterAndDeviceTests(unittest.TestCase):
         self.assertEqual(response.status_code, 303)
         page = self.client.get("/stats/posters", headers=auth())
         self.assertEqual(page.status_code, 200)
-        self.assertIn(b"kuski.qd.je/?p=", page.data)
+        self.assertIn(b'id="flier-scanner-dialog"', page.data)
         self.assertIn("Knjižnica CTK".encode(), page.data)
+        self.assertNotIn(b"Odpri QR povezavo", page.data)
+        self.assertNotIn(b'href="https://kuski.qd.je/?p=', page.data)
 
     def test_escaping_and_input_validation(self):
         bad = self.client.post(
@@ -169,6 +171,49 @@ class PosterAndDeviceTests(unittest.TestCase):
                   "label": "CTK"}
         )
         self.assertEqual(bad_code.status_code, 400)
+
+    def test_poster_admin_has_camera_modal_but_no_visit_links(self):
+        self.post_scan()
+        page = self.client.get("/stats/posters", headers=auth())
+        self.assertEqual(page.status_code, 200)
+        self.assertIn(b'id="open-flier-scanner"', page.data)
+        self.assertIn(b'id="flier-scanner-dialog"', page.data)
+        self.assertIn(b'id="flier-name"', page.data)
+        self.assertIn(b'id="flier-poster-id"', page.data)
+        self.assertIn(b'id="flier-open-camera"', page.data)
+        self.assertIn(b'id="flier-qr-image"', page.data)
+        self.assertIn(b'id="flier-paste"', page.data)
+        self.assertIn(b'/static/poster-scanner.js', page.data)
+        self.assertNotIn(b"Odpri QR povezavo", page.data)
+        self.assertNotIn(b'href="https://kuski.qd.je/?p=', page.data)
+
+    def test_scanner_asset_served_and_rejects_nonmatching_urls(self):
+        asset = self.client.get("/static/poster-scanner.js")
+        self.assertEqual(asset.status_code, 200)
+        self.assertIn(b'url.hostname !== "kuski.qd.je"', asset.data)
+        self.assertIn(b'url.searchParams.get("p")', asset.data)
+        self.assertIn(b"scanner.start(", asset.data)
+        self.assertIn(b"scanner.scanFile(", asset.data)
+        self.assertNotIn(b"location.href =", asset.data)
+        self.assertNotIn(b"window.open(", asset.data)
+
+    def test_naming_poster_does_not_create_new_scans(self):
+        self.post_scan()
+        with scan_app.db() as conn:
+            before = conn.execute("SELECT COUNT(*) FROM scans").fetchone()[0]
+            log_before = conn.execute("SELECT COUNT(*) FROM scan_requests").fetchone()[0]
+        response = self.client.post(
+            "/stats/posters", headers=auth(),
+            data={"csrf": scan_app.csrf_token(), "poster_id": "abc123",
+                  "label": "Knjižnica CTK"}
+        )
+        self.assertEqual(response.status_code, 303)
+        self.client.get("/stats/posters", headers=auth())
+        with scan_app.db() as conn:
+            after = conn.execute("SELECT COUNT(*) FROM scans").fetchone()[0]
+            log_after = conn.execute("SELECT COUNT(*) FROM scan_requests").fetchone()[0]
+        self.assertEqual(before, after)
+        self.assertEqual(log_before, log_after)
 
     def test_old_database_migrates_without_losing_scans(self):
         with sqlite3.connect(self.dbpath) as conn:
