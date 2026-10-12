@@ -1,0 +1,4 @@
+backend/.env
+posters.csv
+__pycache__/
+*.pyc
