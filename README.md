@@ -156,14 +156,19 @@ docker compose up -d --build
 ## Poimenovanje plakatov
 
 V zaščiteni administraciji **https://qr-pski-skenirano.cekluka.com/stats/posters**
-je tretji zavihek **Plakati**. Vnesi obstoječi ID plakata in opis (npr.
-`abc123` → `Knjižnica CTK`), nato Shrani. Obstoječo oznako lahko
-kadarkoli spremeniš. Če pustiš polje ID prazno, sistem ustvari nov
-naključni šestmestni šestnajstiški ID. V tabeli je tudi URL QR-kode
-`https://kuski.qd.je/?p=abc123`. **Sliko QR-kode je treba ustvariti
-s tem URL-jem**; zgolj preimenovanje ne spreminja že natisnjenih QR-kod.
+je tretji zavihek **Plakati**. Tapni **+ Dodaj flier**, vpiši
+lokacijo (npr. `Knjižnica CTK`), nato izberi **Odpri kamero in skeniraj QR**.
+Ko kamera prebere QR-kodo fizičnega plakata, se njen identifikator
+`?p=abc123` poveže z imenom. Skener QR-kode **ne odpre** in zato
+**ne ustvari lažnega skeniranja**. Če kamera ni na voljo, lahko v istem
+okencu uporabiš fotografijo ali prilepiš celotni naslov QR-kode.
+Če QR-koda nima parametra `?p=ID`, je treba plakat opremiti z novo
+sledljivo QR-kodo, preden jo lahko dodaš s skenerjem.
 
-Ime se prikazuje v **Pregledu**, **Posameznih zahtevkih** in v izvozu CSV.
+V tabeli sta samo ime in ID kode (klikljiva povezava
+**Odpri QR povezavo** je odstranjena). Obstoječe ime je mogoče
+spremeniti z obrazcem **Shrani**, ne da bi spreminjali QR-kodo.
+Ime je vidno v **Pregledu**, **Posameznih zahtevkih** in izvozu CSV.
 Obstoječi skeni in podatki ostanejo v SQLite volumnu.
 
 ## Metapodatki in povezovanje obiskov
@@ -208,3 +213,14 @@ docker compose up -d --build
 
 Testna koda plakata se mora pojaviti v `/stats/posters` in `/stats`.
 Nova baza se migrira samodejno brez brisanja dosedanjih skenov.
+
+
+### Kamera v administraciji
+
+Kamera se vključi šele po pritisku gumba in dovoljenju brskalnika.
+Naloži se `html5-qrcode` (različica 2.3.8) iz CDN na zahtevo.
+Za kamero je potreben HTTPS; skeniranje fotografije in ročni vnos
+QR naslova sta alternativi. Skenirani naslovi se **nikoli ne odpirajo**.
+Sprejete so le veljavne povezave oblike
+`https://kuski.qd.je/?p=ID`. Ime se shrani na VPS v SQLite
+v tabelo `poster_labels`, zaščiteno z obstoječo prijavo in CSRF.
