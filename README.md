@@ -15,10 +15,10 @@ Ob odprtju stran:
 
 Zato refresh po prvem odprtju ne steje novega skena. Vsak scan ima se nakljucni `scan_id`, zato tudi ponovljen beacon istega odpiranja ni podvojen.
 
-Backend v SQLite hrani samo:
-- poster ID,
-- cas skena,
-- nakljucni scan ID za deduplikacijo.
+Backend v SQLite hrani skene in dnevnik zahtevkov `POST /scan`:
+- ID plakata in nakljucni ID zahtevka,
+- cas zahtevka in rezultat (`counted`, `duplicate` ali `invalid_*`),
+- HTTP status.
 
 IP naslov se ne zapisuje v aplikacijsko bazo.
 
@@ -26,12 +26,12 @@ IP naslov se ne zapisuje v aplikacijsko bazo.
 
 ### 1. DNS
 
-V DigitalPlat DNS za cono `kuski.qd.je` dodaj:
+V Cloudflare DNS za `cekluka.com` dodaj zapis:
 
 - Type: `A`
-- Name: `scan`
-- Value: javni IPv4 Oracle VPS
-- TTL: `300`
+- Name: `qr-pski-skenirano`
+- Value: `130.61.150.14`
+- Proxy status: `Proxied` (deluje tudi `DNS only`).
 
 To ustvari `qr-pski-skenirano.cekluka.com`.
 
@@ -62,9 +62,12 @@ API je na host portu `8787`.
 Dodaj Proxy Host:
 
 - Domain: `qr-pski-skenirano.cekluka.com`
-- Forward Host/IP: Oracle VPS host, dosegljiv iz NPM
-- Forward Port: `8787`
 - Scheme: `http`
+- Forward Hostname / IP: `kuzki-scan`
+- Forward Port: `8000`
+
+NPM in `kuzki-scan` morata biti na istem Docker omrezju `proxy`.
+Ce nista, se lahko uporabi zasebni IP VPS in gostiteljski port `8787`.
 
 Na SSL zavihku zahtevaj nov certifikat in vklopi Force SSL.
 
