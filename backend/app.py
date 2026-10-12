@@ -1,4 +1,7 @@
 import csv
+import hashlib
+import json
+import secrets
 import hmac
 import io
 import os
@@ -8,7 +11,7 @@ from datetime import datetime, timezone
 from functools import wraps
 from html import escape
 
-from flask import Flask, Response, jsonify, request
+from flask import Flask, Response, jsonify, redirect, request
 
 DB_PATH = os.getenv("DB_PATH", "/data/scans.db")
 ADMIN_USER = os.getenv("ADMIN_USER", "admin")
@@ -16,6 +19,8 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 
 POSTER_ID_RE = re.compile(r"^[A-Za-z0-9_-]{4,24}$")
 SCAN_ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,80}$")
+BROWSER_ID_RE = re.compile(r"^[a-f0-9-]{36}$")
+
 
 app = Flask(__name__)
 
@@ -74,6 +79,20 @@ def db():
                 FROM scans ORDER BY id
                 """
             )
+        # Add non-identifying HTTP metadata fields without dropping old rows.
+        cols = {r[1] for r in conn.execute("PRAGMA table_info(scan_requests)")}
+        for field in ("user_agent", "accept_language", "country", "client_hints",
+                      "browser_id", "device_details"):
+            if field not in cols:
+                conn.execute(f"ALTER TABLE scan_requests ADD COLUMN {field} TEXT DEFAULT ''")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_scan_requests_browser "
+            "ON scan_requests(browser_id, requested_at DESC)"
+        )
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS poster_labels ("
+            "poster_id TEXT PRIMARY KEY, label TEXT NOT NULL)"
+        )
         conn.commit()
     except Exception:
         conn.rollback()
@@ -132,20 +151,56 @@ def health():
     return jsonify(status="ok")
 
 
+def parse_consent_data():
+    if len(request.get_data(cache=True)) > 2048:
+        return None
+    try:
+        data = json.loads(request.get_data(as_text=True) or "{}")
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(data, dict) or data.get("consent") is not True:
+        return None
+    bid = data.get("browser_id")
+    if not isinstance(bid, str) or not BROWSER_ID_RE.fullmatch(bid):
+        return None
+    details = data.get("details", {})
+    if not isinstance(details, dict):
+        return None
+    allowed = ("language", "timezone", "platform", "screen", "viewport",
+               "pixel_ratio", "color_depth", "touch_points", "cores",
+               "memory_gb", "network_type")
+    clean = {}
+    for key in allowed:
+        value = details.get(key)
+        if isinstance(value, (str, int, float)) and not isinstance(value, bool):
+            clean[key] = str(value)[:80]
+    return bid, json.dumps(clean, ensure_ascii=False)
+
+
 @app.post("/scan")
 def scan():
     poster_id = (request.args.get("p") or "").strip()
     scan_id = (request.args.get("s") or "").strip()
     now = int(datetime.now(timezone.utc).timestamp())
 
-    # Save each incoming POST separately, including rejected and duplicate
-    # requests. Do not log IP addresses, user agents, or auth credentials.
     if not POSTER_ID_RE.fullmatch(poster_id):
         result, status = "invalid_poster", 400
     elif not SCAN_ID_RE.fullmatch(scan_id):
         result, status = "invalid_scan", 400
     else:
         result, status = "counted", 204
+
+    # Technical request headers; never store IP addresses.
+    user_agent = (request.headers.get("User-Agent") or "")[:400]
+    language = (request.headers.get("Accept-Language") or "")[:120]
+    country = (request.headers.get("CF-IPCountry") or "")[:10]
+    hints = " | ".join(filter(None, [
+        request.headers.get("Sec-CH-UA"),
+        request.headers.get("Sec-CH-UA-Platform"),
+        request.headers.get("Sec-CH-UA-Mobile"),
+    ]))[:400]
+    device = parse_consent_data()
+    browser_id, device_details = device if device else ("", "")
 
     with db() as conn:
         if result == "counted":
@@ -158,15 +213,52 @@ def scan():
                 result = "duplicate"
 
         conn.execute(
-            """
-            INSERT INTO scan_requests
-                (poster_id, scan_id, requested_at, result, http_status)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (poster_id[:80], scan_id[:80], now, result, status),
+            """INSERT INTO scan_requests
+                (poster_id, scan_id, requested_at, result, http_status,
+                 user_agent, accept_language, country, client_hints, browser_id, device_details)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (poster_id[:80], scan_id[:80], now, result, status,
+             user_agent, language, country, hints, browser_id, device_details),
         )
-
     return Response(status=status)
+
+
+@app.post("/scan/enrich")
+def enrich_scan():
+    poster_id = (request.args.get("p") or "").strip()
+    scan_id = (request.args.get("s") or "").strip()
+    if not POSTER_ID_RE.fullmatch(poster_id) or not SCAN_ID_RE.fullmatch(scan_id):
+        return Response(status=400)
+    device = parse_consent_data()
+    if device is None:
+        return Response(status=400)
+    with db() as conn:
+        result = conn.execute(
+            """UPDATE scan_requests SET browser_id=?, device_details=?
+               WHERE poster_id=? AND scan_id=? AND result='counted'""",
+            (*device, poster_id, scan_id),
+        )
+    return Response(status=204 if result.rowcount else 404)
+
+
+@app.post("/privacy/forget")
+def forget_browser():
+    if len(request.get_data(cache=True)) > 1024:
+        return Response(status=400)
+    try:
+        data = json.loads(request.get_data(as_text=True) or "{}")
+    except (ValueError, TypeError):
+        return Response(status=400)
+    browser_id = data.get("browser_id") if isinstance(data, dict) else None
+    if not isinstance(browser_id, str) or not BROWSER_ID_RE.fullmatch(browser_id):
+        return Response(status=400)
+    with db() as conn:
+        conn.execute(
+            "UPDATE scan_requests SET browser_id='', device_details='' WHERE browser_id=?",
+            (browser_id,),
+        )
+    return Response(status=204)
+
 
 
 def stats_rows():
@@ -174,18 +266,20 @@ def stats_rows():
         return conn.execute(
             """
             SELECT
-                poster_id,
+                s.poster_id,
+                COALESCE(p.label, '') AS label,
                 COUNT(*) AS scans,
-                MIN(scanned_at) AS first_scan,
-                MAX(scanned_at) AS last_scan,
+                MIN(s.scanned_at) AS first_scan,
+                MAX(s.scanned_at) AS last_scan,
                 SUM(
                     CASE
-                        WHEN scanned_at >= CAST(strftime('%s','now') AS INTEGER) - 86400
+                        WHEN s.scanned_at >= CAST(strftime('%s','now') AS INTEGER) - 86400
                         THEN 1 ELSE 0
                     END
                 ) AS scans_24h
-            FROM scans
-            GROUP BY poster_id
+            FROM scans s
+            LEFT JOIN poster_labels p ON p.poster_id = s.poster_id
+            GROUP BY s.poster_id
             ORDER BY scans DESC, last_scan DESC
             """
         ).fetchall()
@@ -212,6 +306,11 @@ STATS_CSS = (
     ".table-wrap{overflow-x:auto}"
     ".muted{color:#647069}"
     ".pager{display:flex;gap:15px;margin:18px 0;align-items:center}"
+    "input{font:inherit;border:1px solid #bbb;border-radius:8px;padding:8px;max-width:100%}"
+    "button{font:inherit;border:0;border-radius:8px;padding:9px 13px;background:#173e2e;color:#fff;cursor:pointer}"
+    ".label{font-weight:700}.sub{font-size:12px;color:#647069}.panel{background:#f5f3ee;padding:14px;border-radius:12px;margin:18px 0}"
+    "form.inline{display:flex;gap:6px;align-items:center;flex-wrap:wrap}"
+    "details{max-width:440px}summary{cursor:pointer}"
     "</style>"
 )
 
@@ -219,10 +318,12 @@ STATS_CSS = (
 def stats_tabs(active):
     summary = ' class="active"' if active == "summary" else ""
     requests_tab = ' class="active"' if active == "requests" else ""
+    posters_tab = ' class="active"' if active == "posters" else ""
     return (
         '<nav class="tabs" aria-label="Statistika">'
         f'<a href="/stats"{summary}>Pregled</a>'
         f'<a href="/stats/requests"{requests_tab}>Posamezni zahtevki</a>'
+        f'<a href="/stats/posters"{posters_tab}>Plakati</a>'
         '</nav>'
     )
 
@@ -242,13 +343,14 @@ def stats():
         f"<h1>QR skeni</h1><p>Skupaj: <strong>{total}</strong></p>",
         "<p><a href='/stats.csv'>Prenesi CSV</a></p>",
         '<div class="table-wrap">',
-        "<table><thead><tr><th>Plakat ID</th><th>Skeni</th><th>24 h</th><th>Prvi</th><th>Zadnji</th></tr></thead><tbody>",
+        "<table><thead><tr><th>Plakat</th><th>ID</th><th>Skeni</th><th>24 h</th><th>Prvi</th><th>Zadnji</th></tr></thead><tbody>",
     ]
 
     for row in rows:
         body.append(
             "<tr>"
-            f"<td><code>{row['poster_id']}</code></td>"
+            f"<td><span class='label'>{escape(row['label']) or '—'}</span></td>"
+            f"<td><code>{escape(row['poster_id'])}</code></td>"
             f"<td>{row['scans']}</td>"
             f"<td>{row['scans_24h']}</td>"
             f"<td>{fmt_time(row['first_scan'])}</td>"
@@ -338,13 +440,14 @@ def stats_csv():
     out = io.StringIO()
     writer = csv.writer(out)
     writer.writerow(
-        ["poster_id", "scans", "scans_24h", "first_scan_utc", "last_scan_utc"]
+        ["poster_id", "label", "scans", "scans_24h", "first_scan_utc", "last_scan_utc"]
     )
 
     for row in stats_rows():
         writer.writerow(
             [
                 row["poster_id"],
+                row["label"],
                 row["scans"],
                 row["scans_24h"],
                 fmt_time(row["first_scan"]),
