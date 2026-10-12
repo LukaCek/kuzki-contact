@@ -1,0 +1,4 @@
+{$SCAN_DOMAIN} {
+    encode zstd gzip
+    reverse_proxy scan-api:8000
+}
