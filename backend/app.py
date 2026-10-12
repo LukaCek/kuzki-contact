@@ -62,8 +62,13 @@ def admin_required(view):
         if not auth:
             return unauthorized()
 
-        user_ok = hmac.compare_digest(auth.username or "", ADMIN_USER)
-        pass_ok = hmac.compare_digest(auth.password or "", ADMIN_PASSWORD)
+        # compare_digest accepts arbitrary Unicode credentials as UTF-8 bytes.
+        user_ok = hmac.compare_digest(
+            (auth.username or "").encode("utf-8"), ADMIN_USER.encode("utf-8")
+        )
+        pass_ok = hmac.compare_digest(
+            (auth.password or "").encode("utf-8"), ADMIN_PASSWORD.encode("utf-8")
+        )
         if not (user_ok and pass_ok):
             return unauthorized()
 
