@@ -110,12 +110,15 @@ test("share copies clean URL rather than a poster-specific one", async () => {
   assert.equal(c.url, "https://kuski.qd.je/");
 });
 
-test("page shows authentic branding and four-toed paw but no privacy prompt", () => {
-  assert.equal((html.match(/<ellipse\b/g) || []).length, 4);
+test("flyer appears above contacts without a redundant top header", () => {
+  assert.doesNotMatch(html, /<header class="site-header"|class="brand-logo"|ZA VESELE TAČKE/);
+  assert.ok(html.indexOf('class="flyer-panel"') < html.indexOf('class="contact-panel"'));
+  assert.match(html, /\\.contact-card\\s*\\{\\s*display: flex; flex-direction: column;/);
+  assert.doesNotMatch(html, /flex-direction: column-reverse/);
+  assert.match(html, /mateja-flyer\\.png\\?v=6/);
   assert.match(html, /class="brand-mark whatsapp-mark"/);
   assert.match(html, /class="brand-mark viber-mark"/);
-  assert.match(html, /mateja-flyer\.png\?v=6/);
-  assert.match(html, /mailto:sprehodkuzkov\.lj@gmail\.com/);
-  assert.match(html, /src="app\.js\?v=2" defer/);
+  assert.match(html, /mailto:sprehodkuzkov\\.lj@gmail\\.com/);
+  assert.match(html, /src="app\\.js\\?v=2" defer/);
   assert.doesNotMatch(html, /privacyControls|privacyActions|Dovoli anonimno prepoznavanje/);
 });
