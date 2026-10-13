@@ -35,36 +35,25 @@
     a, button { -webkit-tap-highlight-color: transparent; }
     button { font: inherit; cursor: pointer; }
     :focus-visible { outline: 3px solid #8ebc8e; outline-offset: 3px; }
-    .site-shell { width: min(100% - 40px, 940px); margin: 0 auto; padding: 30px 0 40px; }
-    .site-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 0 2px 22px; }
-    .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; color: inherit; }
-    .brand-logo {
-      display: grid; place-items: center; height: 45px; width: 45px;
-      border-radius: 15px; background: var(--green); color: white; flex: none;
-      box-shadow: 0 5px 12px #21463219;
-    }
-    .brand-logo svg { width: 27px; height: 27px; }
-    .brand-name { font-size: 15px; font-weight: 780; letter-spacing: -.35px; }
-    .brand-tagline { display: block; font-size: 12px; color: var(--muted); font-weight: 500; margin-top: 2px; }
-    .header-tag { font-size: 11px; font-weight: 730; letter-spacing: 1.4px; text-transform: uppercase; color: #647a69; }
+    .site-shell { width: min(100% - 32px, 600px); margin: 0 auto; padding: 22px 0 32px; }
     .contact-card {
-      display: grid; grid-template-columns: minmax(0, .98fr) minmax(0, 1.02fr);
-      border: 1px solid var(--line); border-radius: 28px; overflow: hidden;
+      display: flex; flex-direction: column;
+      border: 1px solid var(--line); border-radius: 26px; overflow: hidden;
       background: var(--card);
       box-shadow: 0 20px 65px #29413012, 0 2px 8px #29413008;
     }
     .flyer-panel {
-      display: flex; flex-direction: column; justify-content: center;
-      padding: 26px; background: linear-gradient(160deg, #eaf0e7, #f1ede4);
-      min-width: 0;
+      display: flex; justify-content: center;
+      padding: 20px; background: linear-gradient(160deg, #eaf0e7, #f1ede4);
+      border-bottom: 1px solid var(--line); min-width: 0;
     }
     .flyer-frame {
-      margin: 0; padding: 9px; border-radius: 19px; background: #fffefa;
-      border: 1px solid #d9e0d5; box-shadow: 0 14px 34px #20382920;
+      width: 100%; max-width: 520px;
+      margin: 0; padding: 8px; border-radius: 18px; background: #fffefa;
+      border: 1px solid #d9e0d5; box-shadow: 0 12px 30px #20382916;
     }
     .flyer-img { display: block; width: 100%; height: auto; border-radius: 11px; }
-    .flyer-caption { margin: 17px 0 0; font-size: 12px; font-weight: 600; color: #677769; text-align: center; letter-spacing: .15px; }
-    .contact-panel { min-width: 0; padding: clamp(25px, 4vw, 46px); }
+    .contact-panel { min-width: 0; padding: clamp(25px, 5vw, 40px); }
     .eyebrow {
       display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px;
       color: #416f50; font-size: 11px; font-weight: 800;
@@ -122,13 +111,11 @@
     .privacy-choice { margin: 4px 5px 0 0; border: 1px solid var(--line); border-radius: 9px; background: white; padding: 7px 9px; font-size: 12px; }
     .page-note { margin: 18px 0 0; text-align: center; color: #849082; font-size: 12px; }
     @media (max-width: 760px) {
-      .site-shell { width: min(100% - 24px, 520px); padding: 14px 0 24px; }
-      .site-header { padding: 0 5px 15px; }
-      .header-tag { display: none; }
-      .contact-card { display: flex; flex-direction: column-reverse; border-radius: 23px; }
+      .site-shell { width: min(100% - 24px, 520px); padding: 12px 0 24px; }
+      .contact-card { border-radius: 23px; }
       .contact-panel { padding: 27px 23px 25px; }
-      .flyer-panel { padding: 20px 23px 23px; border-top: 1px solid var(--line); }
-      .flyer-frame { max-width: 370px; width: 100%; align-self: center; }
+      .flyer-panel { padding: 12px; }
+      .flyer-frame { max-width: 470px; padding: 6px; }
       h1 { font-size: clamp(33px, 8vw, 41px); }
       .intro { margin-bottom: 23px; }
     }
@@ -148,26 +135,11 @@
 </head>
 <body>
   <div class="site-shell">
-    <header class="site-header">
-      <div class="brand" aria-label="Sprehajanje kužkov">
-        <span class="brand-logo"><svg viewBox="0 0 64 64" fill="currentColor" aria-hidden="true">
-  <ellipse cx="12" cy="24" rx="6" ry="8" transform="rotate(-16 12 24)"/>
-  <ellipse cx="25" cy="14" rx="6" ry="8" transform="rotate(-6 25 14)"/>
-  <ellipse cx="40" cy="14" rx="6" ry="8" transform="rotate(6 40 14)"/>
-  <ellipse cx="53" cy="24" rx="6" ry="8" transform="rotate(16 53 24)"/>
-  <path d="M32.5 29c-7.1 0-12.5 6.8-16.4 13.6-2.4 4.1-2.9 8.6.2 11.1 3.1 2.6 6.4 1.4 9.6 0 2.1-.9 4-1.5 6.6-1.5s4.5.6 6.6 1.5c3.2 1.4 6.5 2.6 9.6 0 3.1-2.5 2.6-7 .2-11.1C45 35.8 39.6 29 32.5 29Z"/>
-</svg></span>
-        <span><span class="brand-name">Sprehajanje kužkov</span><span class="brand-tagline">Kontakt in dogovor za sprehod</span></span>
-      </div>
-      <span class="header-tag">ZA VESELE TAČKE</span>
-    </header>
-
     <main class="contact-card">
       <section class="flyer-panel" aria-label="Predstavitev sprehajanja kužkov">
         <figure class="flyer-frame">
-          <img class="flyer-img" src="mateja-flyer.png?v=6" alt="Letak z informacijami o sprehajanju kužkov" decoding="async" loading="lazy">
+          <img class="flyer-img" src="mateja-flyer.png?v=6" alt="Letak z informacijami o sprehajanju kužkov" decoding="async" fetchpriority="high">
         </figure>
-        <p class="flyer-caption">Vse informacije na enem mestu.</p>
       </section>
 
       <section class="contact-panel" aria-labelledby="contactTitle">
