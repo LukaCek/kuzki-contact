@@ -1,0 +1,29 @@
+name: Contact frontend tests
+
+on:
+  push:
+    paths:
+      - "index.html"
+      - "app.js"
+      - "tests/contact.test.cjs"
+      - ".github/workflows/frontend-tests.yml"
+  pull_request:
+    paths:
+      - "index.html"
+      - "app.js"
+      - "tests/contact.test.cjs"
+      - ".github/workflows/frontend-tests.yml"
+  workflow_dispatch:
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check JavaScript syntax
+        run: node --check app.js
+      - name: Test contact and QR tracking
+        run: node --test tests/contact.test.cjs
