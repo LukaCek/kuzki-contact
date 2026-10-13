@@ -182,13 +182,26 @@ Za vsako zahtevo `POST /scan` se poleg trenutnih podatkov beležijo:
 To niso zanesljivi identifikatorji posameznega telefona. IP-ja backend
 ne shranjuje.
 
-Na javni strani je neobvezna, jasno označena **privolitev za prepoznavanje
-ponovnih obiskov**. Brez nje se skeni štejejo kot prej. Ob privolitvi
-se v `localStorage` ustvari naključni identifikator brskalnika in
-pošljejo omejene dodatne lastnosti, ki ne potrebujejo sistemskih dovoljenj:
-jezik, časovni pas, platforma, mere zaslona in okna, DPR, globina barv,
-podpora dotiku, število logičnih jeder, približen pomnilnik in vrsta
-omrežja. Nekateri brskalniki jih ne razkrijejo.
+Javna kontaktna stran ima prenovljen prikaz v `index.html` in
+funkcionalnosti v `app.js`. Na **vrhu `app.js`** je stikalo:
+
+```javascript
+const ENABLE_DEVICE_ANALYTICS = false;
+```
+
+Ko je `false`, je prikaz privolitve odstranjen iz uporabniškega vmesnika;
+ne uporablja se `localStorage`, ne pošiljajo se trajni identifikatorji
+brskalnika in dodatne lastnosti naprave. **Osnovni `POST /scan` in
+štetje QR-skenov delujeta še naprej**, backend pa beleži standardne
+tehnične podatke HTTP zahtevka, opisane zgoraj.
+
+Če stikalo v prihodnje spremeniš v `true`, se vrne **prostovoljna
+izbira** za dodatno analitiko, nikakor pa to ne pomeni samodejnega
+zbiranja brez privolitve. Šele po privolitvi se v `localStorage`
+ustvari naključni identifikator brskalnika in pošljejo omejene dodatne
+lastnosti naprave: jezik, časovni pas, platforma, mere zaslona in okna,
+DPR, globina barv, podpora dotiku, število logičnih jeder, približen
+pomnilnik in vrsta omrežja. Nekateri brskalniki jih ne razkrijejo.
 
 V zavihku **Posamezni zahtevki** se isti identifikator lahko klikne
 za prikaz zahtevkov iz istega brskalnika. To **ni dokaz, da gre za isti
@@ -224,3 +237,18 @@ QR naslova sta alternativi. Skenirani naslovi se **nikoli ne odpirajo**.
 Sprejete so le veljavne povezave oblike
 `https://kuski.qd.je/?p=ID`. Ime se shrani na VPS v SQLite
 v tabelo `poster_labels`, zaščiteno z obstoječo prijavo in CSRF.
+
+## Kontaktna stran
+
+- Prenovljen, odziven izgled (`index.html`), z letakom `mateja-flyer.png`.
+- Tačka ima vse **štiri prste**, WhatsApp in Viber uporabljata SVG logotipa
+  iz Simple Icons, ostale akcije pa preverjene ikone iz Lucide.
+- Telefonski kontakt ostaja `+38670337710`; e-pošta je
+  `sprehodkuzkov.lj@gmail.com`.
+- Gumb **Deli kontakt** ne deli naključnega ID-ja plakata `?p=...`.
+- JavaScript je v `app.js`, kjer se dodatno zbiranje podatkov
+  vklopi/izklopi s konstanto `ENABLE_DEVICE_ANALYTICS`.
+- Frontend regresijski testi: `node --test tests/contact.test.cjs`.
+
+Kontaktna stran se objavlja z GitHub Pages; za te spremembe ni potrebno
+ponovno graditi Docker backenda.
