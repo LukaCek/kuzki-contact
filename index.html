@@ -3,174 +3,209 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#f6f5f0">
+  <meta name="theme-color" content="#f7f7f4">
   <meta name="referrer" content="no-referrer">
-  <meta name="description" content="Kontakt za sprehajanje kužkov. Pokliči, pošlji SMS, piši prek WhatsAppa, Viberja ali e-pošte.">
+  <meta name="description" content="Sprehajanje kužkov – kontakt za dogovor o sprehodu. Piši na WhatsApp, pokliči ali pošlji sporočilo.">
   <meta property="og:title" content="Sprehajanje kužkov | Kontakt">
-  <meta property="og:description" content="Dogovor za sprehajanje kužkov. Stopimo v stik.">
+  <meta property="og:description" content="Za dogovor o sprehodu kužka mi piši na WhatsApp.">
   <meta property="og:type" content="website">
   <title>Kontakt | Sprehajanje kužkov</title>
   <style>
     :root {
       color-scheme: light;
-      --page: #f6f5f0;
-      --card: #fffefa;
-      --text: #20332a;
-      --muted: #68796e;
-      --green: #244938;
-      --green-deep: #173827;
-      --green-soft: #ecf3eb;
-      --line: #e5e7de;
-      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      --bg: #f7f7f4;
+      --paper: #fff;
+      --ink: #252c27;
+      --muted: #636b64;
+      --border: #e1e4dc;
+      --whatsapp: #188451;
+      --whatsapp-hover: #126f42;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
     }
     * { box-sizing: border-box; }
-    html { min-height: 100%; }
-    body {
-      margin: 0; min-height: 100dvh; color: var(--text); font-family: var(--font);
-      -webkit-font-smoothing: antialiased;
-      background: radial-gradient(ellipse at 6% 4%, #e9f0e4 0%, transparent 34%),
-                  radial-gradient(ellipse at 97% 100%, #f0e9d9 0%, transparent 32%),
-                  var(--page);
-    }
-    a, button { -webkit-tap-highlight-color: transparent; }
+    body { margin: 0; background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
+    button, a { -webkit-tap-highlight-color: transparent; }
     button { font: inherit; cursor: pointer; }
-    :focus-visible { outline: 3px solid #8ebc8e; outline-offset: 3px; }
-    .site-shell { width: min(100% - 32px, 600px); margin: 0 auto; padding: 22px 0 32px; }
+    :focus-visible { outline: 3px solid #78b28a; outline-offset: 3px; }
+    .site-shell {
+      width: min(100% - 28px, 560px);
+      margin: 0 auto;
+      padding: 18px 0 34px;
+    }
     .contact-card {
-      display: flex; flex-direction: column;
-      border: 1px solid var(--line); border-radius: 26px; overflow: hidden;
-      background: var(--card);
-      box-shadow: 0 20px 65px #29413012, 0 2px 8px #29413008;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
     .flyer-panel {
-      display: flex; justify-content: center;
-      padding: 20px; background: linear-gradient(160deg, #eaf0e7, #f1ede4);
-      border-bottom: 1px solid var(--line); min-width: 0;
+      padding: 12px;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
     }
-    .flyer-frame {
-      width: 100%; max-width: 520px;
-      margin: 0; padding: 8px; border-radius: 18px; background: #fffefa;
-      border: 1px solid #d9e0d5; box-shadow: 0 12px 30px #20382916;
+    .flyer-frame { margin: 0; }
+    .flyer-img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 6px;
     }
-    .flyer-img { display: block; width: 100%; height: auto; border-radius: 11px; }
-    .contact-panel { min-width: 0; padding: clamp(25px, 5vw, 40px); }
-    .eyebrow {
-      display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px;
-      color: #416f50; font-size: 11px; font-weight: 800;
-      text-transform: uppercase; letter-spacing: 1.75px;
+    .contact-panel { padding: 27px 25px 25px; }
+    h1 {
+      margin: 0 0 9px;
+      font-size: clamp(24px, 5.5vw, 29px);
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -.6px;
     }
-    .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #76ad78; }
-    h1 { margin: 0; font-size: clamp(35px, 4vw, 44px); line-height: 1.11; font-weight: 770; letter-spacing: -1.8px; color: #1e3428; }
-    .intro { margin: 15px 0 27px; font-size: 15px; line-height: 1.65; color: var(--muted); max-width: 36ch; }
-    .section-label { margin: 0 0 12px; font-size: 12px; font-weight: 760; letter-spacing: .75px; text-transform: uppercase; color: #748476; }
-    .contact-links { display: grid; gap: 11px; }
+    .intro {
+      margin: 0 0 22px;
+      font-size: 15px;
+      line-height: 1.55;
+      color: var(--muted);
+    }
+    .contact-links { display: grid; gap: 10px; }
     .contact-action {
-      display: flex; align-items: center; gap: 12px; min-width: 0;
-      min-height: 60px; text-decoration: none; color: var(--text);
-      border-radius: 16px; border: 1px solid var(--line);
-      background: white; padding: 11px 14px; font-size: 15px; font-weight: 720;
-      transition: transform .16s ease, background .16s ease, border-color .16s ease, box-shadow .16s ease;
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      gap: 11px;
+      min-height: 57px;
+      padding: 11px 13px;
+      text-decoration: none;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: background .15s ease, border-color .15s ease;
     }
-    .contact-action:hover { border-color: #cdd9ca; background: #fbfefa; transform: translateY(-1px); box-shadow: 0 5px 14px #2c4a3210; }
-    .contact-action:active { transform: translateY(0); }
-    .contact-action .icon-wrap {
-      flex: none; display: grid; place-items: center; width: 38px; height: 38px;
-      background: #f2f4ef; border-radius: 11px; color: #405d49;
+    .contact-action:hover { background: #f8faf7; border-color: #bfcac0; }
+    .contact-action:active { background: #f1f5ef; }
+    .icon-wrap {
+      display: grid;
+      flex: 0 0 27px;
+      place-items: center;
+      color: #536457;
     }
-    .line-mark, .brand-mark { display: block; width: 21px; height: 21px; }
-    .action-label { flex: 1; min-width: 0; }
-    .action-arrow { width: 17px; height: 17px; flex: none; color: #809184; }
+    .line-mark, .brand-mark { width: 23px; height: 23px; display: block; }
+    .action-label { min-width: 0; flex: 1; }
     .contact-action.primary {
-      min-height: 73px; border-color: var(--green); color: #fff;
-      background: linear-gradient(125deg, var(--green), var(--green-deep));
-      box-shadow: 0 7px 16px #23483220;
+      min-height: 77px;
+      padding: 13px 17px;
+      background: var(--whatsapp);
+      border-color: var(--whatsapp);
+      color: #fff;
+      font-size: 17px;
+      font-weight: 720;
+      border-radius: 11px;
     }
-    .contact-action.primary:hover { background: var(--green-deep); border-color: var(--green-deep); }
-    .contact-action.primary .icon-wrap { width: 43px; height: 43px; background: #ffffff24; color: #fff; }
-    .contact-action.primary .line-mark { width: 23px; height: 23px; }
-    .contact-action.primary .action-arrow { color: #cddfd0; }
-    .contact-action.primary .action-sub { display: block; margin-top: 3px; font-size: 13px; color: #cfe0d3; font-weight: 520; }
-    .action-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-    .action-grid .contact-action { padding: 11px 12px; gap: 10px; font-size: 14px; min-height: 58px; }
-    .action-grid .icon-wrap { width: 34px; height: 34px; border-radius: 10px; }
-    .icon-wrap.whatsapp { background: #e7f9eb; color: #169b49; }
-    .icon-wrap.viber { background: #f0ebff; color: #7360b5; }
-    .icon-wrap.mail { background: #f2f1e9; color: #6b7053; }
-    .icon-wrap.sms { background: #ebf1fc; color: #4476ac; }
-    .contact-footer { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 18px; }
+    .contact-action.primary:hover { background: var(--whatsapp-hover); border-color: var(--whatsapp-hover); }
+    .contact-action.primary:active { background: #10663c; }
+    .contact-action.primary .icon-wrap { flex-basis: 35px; color: #fff; }
+    .contact-action.primary .brand-mark { width: 32px; height: 32px; }
+    .action-sub {
+      display: block;
+      font-size: 12px;
+      font-weight: 450;
+      margin-top: 4px;
+      color: #e1f7e9;
+      line-height: 1.3;
+    }
+    .other-label {
+      margin: 14px 0 1px;
+      font-size: 12px;
+      line-height: 1.3;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+    }
+    .action-grid .contact-action { gap: 8px; min-height: 53px; padding: 10px 12px; }
+    .action-grid .icon-wrap { flex-basis: 25px; }
+    .action-grid .brand-mark, .action-grid .line-mark { width: 21px; height: 21px; }
+    .contact-footer { margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border); }
     .share-action {
-      display: flex; gap: 10px; align-items: center; justify-content: center;
-      width: 100%; min-height: 48px; border: 1px solid #dbe5da;
-      background: var(--green-soft); border-radius: 13px; color: #2e5a3c;
-      font-size: 14px; font-weight: 740; transition: background .15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      width: 100%;
+      min-height: 44px;
+      border: 0;
+      background: transparent;
+      color: #59645b;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
     }
-    .share-action:hover { background: #e2ece0; }
-    .share-action svg { width: 18px; height: 18px; }
-    #shareStatus { min-height: 19px; margin: 7px 0 0; text-align: center; font-size: 12px; color: #517158; }
-    .privacy-options { border-top: 1px solid var(--line); margin-top: 15px; padding-top: 12px; font-size: 12px; line-height: 1.5; color: var(--muted); }
-    .privacy-choice { margin: 4px 5px 0 0; border: 1px solid var(--line); border-radius: 9px; background: white; padding: 7px 9px; font-size: 12px; }
-    .page-note { margin: 18px 0 0; text-align: center; color: #849082; font-size: 12px; }
-    @media (max-width: 760px) {
-      .site-shell { width: min(100% - 24px, 520px); padding: 12px 0 24px; }
-      .contact-card { border-radius: 23px; }
-      .contact-panel { padding: 27px 23px 25px; }
-      .flyer-panel { padding: 12px; }
-      .flyer-frame { max-width: 470px; padding: 6px; }
-      h1 { font-size: clamp(33px, 8vw, 41px); }
-      .intro { margin-bottom: 23px; }
+    .share-action:hover { background: #f4f6f3; }
+    .share-action .line-mark { width: 17px; height: 17px; }
+    #shareStatus { margin: 0; min-height: 15px; text-align: center; font-size: 12px; color: var(--muted); }
+    /* Only used if voluntary device analytics are enabled in app.js. */
+    .privacy-options { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; font-size: 12px; line-height: 1.5; }
+    .privacy-choice { margin: 4px 6px 0 0; border: 1px solid var(--border); background: #fff; border-radius: 6px; padding: 7px; }
+    @media (max-width: 430px) {
+      .site-shell { width: 100%; padding: 0 0 20px; }
+      .contact-card { border-radius: 0; border-left: 0; border-right: 0; }
+      .flyer-panel { padding: 8px; }
+      .contact-panel { padding: 25px 19px; }
     }
-    @media (max-width: 360px) {
-      .contact-panel { padding: 24px 16px; }
-      .action-grid { gap: 7px; }
-      .action-grid .contact-action { gap: 7px; padding: 10px 8px; font-size: 13px; }
-      .action-grid .icon-wrap { width: 30px; height: 30px; }
-      .action-grid .line-mark, .action-grid .brand-mark { width: 19px; height: 19px; }
+    @media (max-width: 340px) {
+      .action-grid .contact-action { font-size: 13px; padding: 9px; }
+      .action-grid .icon-wrap { flex-basis: 22px; }
     }
     @media (prefers-reduced-motion: reduce) {
-      .contact-action, .share-action { transition: none; }
-      .contact-action:hover { transform: none; }
+      .contact-action { transition: none; }
     }
   </style>
-  <script src="app.js?v=2" defer></script>
+  <script src="app.js?v=3" defer></script>
 </head>
 <body>
   <div class="site-shell">
     <main class="contact-card">
-      <section class="flyer-panel" aria-label="Predstavitev sprehajanja kužkov">
+      <section class="flyer-panel" aria-label="Letak za sprehajanje kužkov">
         <figure class="flyer-frame">
-          <img class="flyer-img" src="mateja-flyer.png?v=6" alt="Letak z informacijami o sprehajanju kužkov" decoding="async" fetchpriority="high">
+          <img class="flyer-img" src="mateja-flyer.png?v=6"
+               alt="Letak z informacijami o sprehajanju kužkov"
+               decoding="async" fetchpriority="high">
         </figure>
       </section>
 
       <section class="contact-panel" aria-labelledby="contactTitle">
-        <div class="eyebrow">Z veseljem pomagam</div>
-        <h1 id="contactTitle">Stopimo v stik.</h1>
-        <p class="intro">Za dogovor o sprehodu ali dodatna vprašanja izberi način, ki ti najbolj ustreza.</p>
+        <h1 id="contactTitle">Kontakt</h1>
+        <p class="intro">Za sprehod ali dodatna vprašanja mi najlažje pišeš na WhatsApp.</p>
 
-        <h2 class="section-label">Kontaktiraj me</h2>
         <div class="contact-links">
-          <a id="callBtn" class="contact-action primary" href="tel:+38670337710">
-            <span class="icon-wrap"><svg class="line-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384" /></svg></span>
-            <span class="action-label">Pokliči<span class="action-sub">070 337 710</span></span>
-            <span class="action-arrow"><svg class="line-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10" />
-  <path d="M7 17 17 7" /></svg></span>
+          <a id="whatsappBtn" class="contact-action primary" href="https://wa.me/38670337710?text=%C5%BDivjo!%20Zanima%20me%20sprehajanje%20ku%C5%BEka." target="_blank" rel="noopener noreferrer">
+            <span class="icon-wrap"><svg class="brand-mark whatsapp-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg></span>
+            <span class="action-label">Piši mi na WhatsApp
+              <span class="action-sub">Sporočilo bo že pripravljeno</span>
+            </span>
           </a>
 
+          <p class="other-label">Ali pa izberi drug način:</p>
           <div class="action-grid">
+            <a id="callBtn" class="contact-action" href="tel:+38670337710">
+              <span class="icon-wrap"><svg class="line-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384" /></svg></span>
+              <span class="action-label">Pokliči</span>
+            </a>
             <a id="smsBtn" class="contact-action" href="sms:+38670337710">
-              <span class="icon-wrap sms"><svg class="line-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" /></svg></span>
+              <span class="icon-wrap"><svg class="line-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" /></svg></span>
               <span class="action-label">SMS</span>
             </a>
-            <a id="whatsappBtn" class="contact-action" href="https://wa.me/38670337710" target="_blank" rel="noopener noreferrer">
-              <span class="icon-wrap whatsapp"><svg class="brand-mark whatsapp-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg></span>
-              <span class="action-label">WhatsApp</span>
-            </a>
             <a id="viberBtn" class="contact-action" href="viber://chat?number=%2B38670337710">
-              <span class="icon-wrap viber"><svg class="brand-mark viber-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.4 0C9.473.028 5.333.344 3.02 2.467 1.302 4.187.696 6.7.633 9.817.57 12.933.488 18.776 6.12 20.36h.003l-.004 2.416s-.037.977.61 1.177c.777.242 1.234-.5 1.98-1.302.407-.44.972-1.084 1.397-1.58 3.85.326 6.812-.416 7.15-.525.776-.252 5.176-.816 5.892-6.657.74-6.02-.36-9.83-2.34-11.546-.596-.55-3.006-2.3-8.375-2.323 0 0-.395-.025-1.037-.017zm.058 1.693c.545-.004.88.017.88.017 4.542.02 6.717 1.388 7.222 1.846 1.675 1.435 2.53 4.868 1.906 9.897v.002c-.604 4.878-4.174 5.184-4.832 5.395-.28.09-2.882.737-6.153.524 0 0-2.436 2.94-3.197 3.704-.12.12-.26.167-.352.144-.13-.033-.166-.188-.165-.414l.02-4.018c-4.762-1.32-4.485-6.292-4.43-8.895.054-2.604.543-4.738 1.996-6.173 1.96-1.773 5.474-2.018 7.11-2.03zm.38 2.602c-.167 0-.303.135-.304.302 0 .167.133.303.3.305 1.624.01 2.946.537 4.028 1.592 1.073 1.046 1.62 2.468 1.633 4.334.002.167.14.3.307.3.166-.002.3-.138.3-.304-.014-1.984-.618-3.596-1.816-4.764-1.19-1.16-2.692-1.753-4.447-1.765zm-3.96.695c-.19-.032-.4.005-.616.117l-.01.002c-.43.247-.816.562-1.146.932-.002.004-.006.004-.008.008-.267.323-.42.638-.46.948-.008.046-.01.093-.007.14 0 .136.022.27.065.4l.013.01c.135.48.473 1.276 1.205 2.604.42.768.903 1.5 1.446 2.186.27.344.56.673.87.984l.132.132c.31.308.64.6.984.87.686.543 1.418 1.027 2.186 1.447 1.328.733 2.126 1.07 2.604 1.206l.01.014c.13.042.265.064.402.063.046.002.092 0 .138-.008.31-.036.627-.19.948-.46.004 0 .003-.002.008-.005.37-.33.683-.72.93-1.148l.003-.01c.225-.432.15-.842-.18-1.12-.004 0-.698-.58-1.037-.83-.36-.255-.73-.492-1.113-.71-.51-.285-1.032-.106-1.248.174l-.447.564c-.23.283-.657.246-.657.246-3.12-.796-3.955-3.955-3.955-3.955s-.037-.426.248-.656l.563-.448c.277-.215.456-.737.17-1.248-.217-.383-.454-.756-.71-1.115-.25-.34-.826-1.033-.83-1.035-.137-.165-.31-.265-.502-.297zm4.49.88c-.158.002-.29.124-.3.282-.01.167.115.312.282.324 1.16.085 2.017.466 2.645 1.15.63.688.93 1.524.906 2.57-.002.168.13.306.3.31.166.003.305-.13.31-.297.025-1.175-.334-2.193-1.067-2.994-.74-.81-1.777-1.253-3.05-1.346h-.024zm.463 1.63c-.16.002-.29.127-.3.287-.008.167.12.31.288.32.523.028.875.175 1.113.422.24.245.388.62.416 1.164.01.167.15.295.318.287.167-.008.295-.15.287-.317-.03-.644-.215-1.178-.58-1.557-.367-.378-.893-.574-1.52-.607h-.018z"/></svg></span>
+              <span class="icon-wrap"><svg class="brand-mark viber-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.4 0C9.473.028 5.333.344 3.02 2.467 1.302 4.187.696 6.7.633 9.817.57 12.933.488 18.776 6.12 20.36h.003l-.004 2.416s-.037.977.61 1.177c.777.242 1.234-.5 1.98-1.302.407-.44.972-1.084 1.397-1.58 3.85.326 6.812-.416 7.15-.525.776-.252 5.176-.816 5.892-6.657.74-6.02-.36-9.83-2.34-11.546-.596-.55-3.006-2.3-8.375-2.323 0 0-.395-.025-1.037-.017zm.058 1.693c.545-.004.88.017.88.017 4.542.02 6.717 1.388 7.222 1.846 1.675 1.435 2.53 4.868 1.906 9.897v.002c-.604 4.878-4.174 5.184-4.832 5.395-.28.09-2.882.737-6.153.524 0 0-2.436 2.94-3.197 3.704-.12.12-.26.167-.352.144-.13-.033-.166-.188-.165-.414l.02-4.018c-4.762-1.32-4.485-6.292-4.43-8.895.054-2.604.543-4.738 1.996-6.173 1.96-1.773 5.474-2.018 7.11-2.03zm.38 2.602c-.167 0-.303.135-.304.302 0 .167.133.303.3.305 1.624.01 2.946.537 4.028 1.592 1.073 1.046 1.62 2.468 1.633 4.334.002.167.14.3.307.3.166-.002.3-.138.3-.304-.014-1.984-.618-3.596-1.816-4.764-1.19-1.16-2.692-1.753-4.447-1.765zm-3.96.695c-.19-.032-.4.005-.616.117l-.01.002c-.43.247-.816.562-1.146.932-.002.004-.006.004-.008.008-.267.323-.42.638-.46.948-.008.046-.01.093-.007.14 0 .136.022.27.065.4l.013.01c.135.48.473 1.276 1.205 2.604.42.768.903 1.5 1.446 2.186.27.344.56.673.87.984l.132.132c.31.308.64.6.984.87.686.543 1.418 1.027 2.186 1.447 1.328.733 2.126 1.07 2.604 1.206l.01.014c.13.042.265.064.402.063.046.002.092 0 .138-.008.31-.036.627-.19.948-.46.004 0 .003-.002.008-.005.37-.33.683-.72.93-1.148l.003-.01c.225-.432.15-.842-.18-1.12-.004 0-.698-.58-1.037-.83-.36-.255-.73-.492-1.113-.71-.51-.285-1.032-.106-1.248.174l-.447.564c-.23.283-.657.246-.657.246-3.12-.796-3.955-3.955-3.955-3.955s-.037-.426.248-.656l.563-.448c.277-.215.456-.737.17-1.248-.217-.383-.454-.756-.71-1.115-.25-.34-.826-1.033-.83-1.035-.137-.165-.31-.265-.502-.297zm4.49.88c-.158.002-.29.124-.3.282-.01.167.115.312.282.324 1.16.085 2.017.466 2.645 1.15.63.688.93 1.524.906 2.57-.002.168.13.306.3.31.166.003.305-.13.31-.297.025-1.175-.334-2.193-1.067-2.994-.74-.81-1.777-1.253-3.05-1.346h-.024zm.463 1.63c-.16.002-.29.127-.3.287-.008.167.12.31.288.32.523.028.875.175 1.113.422.24.245.388.62.416 1.164.01.167.15.295.318.287.167-.008.295-.15.287-.317-.03-.644-.215-1.178-.58-1.557-.367-.378-.893-.574-1.52-.607h-.018z"/></svg></span>
               <span class="action-label">Viber</span>
             </a>
             <a id="emailBtn" class="contact-action" href="mailto:sprehodkuzkov.lj@gmail.com?subject=Sprehajanje%20ku%C5%BEka">
-              <span class="icon-wrap mail"><svg class="line-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
+              <span class="icon-wrap"><svg class="line-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
   <rect x="2" y="4" width="20" height="16" rx="2" /></svg></span>
               <span class="action-label">E-pošta</span>
             </a>
@@ -190,7 +225,6 @@
         </footer>
       </section>
     </main>
-    <p class="page-note">Sprehajanje kužkov · Osebni kontakt</p>
   </div>
 </body>
 </html>
