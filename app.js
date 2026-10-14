@@ -153,17 +153,18 @@ const ENABLE_DEVICE_ANALYTICS = false;
     render();
   }
 
-  // Business contact details: keep the existing links intact.
+  // Calls/SMS and messaging apps use different contact numbers.
   const PHONE_E164 = "+38670337710";
+  const MESSAGING_PHONE_E164 = "+393282274551";
   function enablePhoneLinks() {
     const normalized = PHONE_E164.trim();
     if (!/^\+[1-9]\d{6,14}$/.test(normalized)) return;
-    const digits = normalized.replace(/\D/g, "");
+    const messagingDigits = MESSAGING_PHONE_E164.replace(/\D/g, "");
     const hrefs = {
       callBtn: "tel:" + normalized,
       smsBtn: "sms:" + normalized,
-      whatsappBtn: "https://wa.me/" + digits + "?text=" + encodeURIComponent("Živjo! Zanima me sprehajanje kužka."),
-      viberBtn: "viber://chat?number=" + encodeURIComponent(normalized)
+      whatsappBtn: "https://wa.me/" + messagingDigits + "?text=" + encodeURIComponent("Živjo! Zanima me sprehajanje kužka."),
+      viberBtn: "viber://chat?number=" + encodeURIComponent(MESSAGING_PHONE_E164)
     };
     Object.entries(hrefs).forEach(([id, href]) => {
       const el = document.getElementById(id);
