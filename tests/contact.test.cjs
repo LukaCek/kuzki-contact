@@ -99,7 +99,9 @@ test("all contact links keep the correct phone number", () => {
   const {links} = visit("");
   assert.equal(links.callBtn.href, "tel:+38670337710");
   assert.equal(links.smsBtn.href, "sms:+38670337710");
-  assert.equal(links.whatsappBtn.href, "https://wa.me/38670337710");
+  const whatsAppUrl = new URL(links.whatsappBtn.href);
+  assert.equal(whatsAppUrl.origin + whatsAppUrl.pathname, "https://wa.me/38670337710");
+  assert.equal(whatsAppUrl.searchParams.get("text"), "Živjo! Zanima me sprehajanje kužka.");
   assert.equal(links.viberBtn.href, "viber://chat?number=%2B38670337710");
 });
 
@@ -113,12 +115,21 @@ test("share copies clean URL rather than a poster-specific one", async () => {
 test("flyer appears above contacts without a redundant top header", () => {
   assert.doesNotMatch(html, /<header class="site-header"|class="brand-logo"|ZA VESELE TAČKE/);
   assert.ok(html.indexOf('class="flyer-panel"') < html.indexOf('class="contact-panel"'));
-  assert.match(html, /\.contact-card\s*\{\s*display: flex; flex-direction: column;/);
+  assert.match(html, /\.contact-card\s*\{[\s\S]*?display:\s*flex;[\s\S]*?flex-direction:\s*column;/);
   assert.doesNotMatch(html, /flex-direction: column-reverse/);
   assert.match(html, /mateja-flyer\.png\?v=6/);
   assert.match(html, /class="brand-mark whatsapp-mark"/);
   assert.match(html, /class="brand-mark viber-mark"/);
   assert.match(html, /mailto:sprehodkuzkov\.lj@gmail\.com/);
-  assert.match(html, /src="app\.js\?v=2" defer/);
+  assert.match(html, /src="app\.js\?v=3" defer/);
   assert.doesNotMatch(html, /privacyControls|privacyActions|Dovoli anonimno prepoznavanje/);
+});
+
+test("WhatsApp is the prominent first option and the design is restrained", () => {
+  assert.ok(html.indexOf('id="whatsappBtn"') < html.indexOf('id="callBtn"'));
+  assert.match(html, /id="whatsappBtn" class="contact-action primary"/);
+  assert.match(html, /Piši mi na WhatsApp/);
+  assert.match(html, /Sporočilo bo že pripravljeno/);
+  assert.doesNotMatch(html, /radial-gradient|linear-gradient|class="eyebrow"/);
+  assert.match(html, /class="flyer-panel"/);
 });
