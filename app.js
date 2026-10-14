@@ -162,7 +162,7 @@ const ENABLE_DEVICE_ANALYTICS = false;
     const hrefs = {
       callBtn: "tel:" + normalized,
       smsBtn: "sms:" + normalized,
-      whatsappBtn: "https://wa.me/" + digits,
+      whatsappBtn: "https://wa.me/" + digits + "?text=" + encodeURIComponent("Živjo! Zanima me sprehajanje kužka."),
       viberBtn: "viber://chat?number=" + encodeURIComponent(normalized)
     };
     Object.entries(hrefs).forEach(([id, href]) => {
