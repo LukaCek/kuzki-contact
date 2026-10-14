@@ -100,9 +100,9 @@ test("all contact links keep the correct phone number", () => {
   assert.equal(links.callBtn.href, "tel:+38670337710");
   assert.equal(links.smsBtn.href, "sms:+38670337710");
   const whatsAppUrl = new URL(links.whatsappBtn.href);
-  assert.equal(whatsAppUrl.origin + whatsAppUrl.pathname, "https://wa.me/38670337710");
+  assert.equal(whatsAppUrl.origin + whatsAppUrl.pathname, "https://wa.me/393282274551");
   assert.equal(whatsAppUrl.searchParams.get("text"), "Živjo! Zanima me sprehajanje kužka.");
-  assert.equal(links.viberBtn.href, "viber://chat?number=%2B38670337710");
+  assert.equal(links.viberBtn.href, "viber://chat?number=%2B393282274551");
 });
 
 test("share copies clean URL rather than a poster-specific one", async () => {
@@ -121,7 +121,7 @@ test("flyer appears above contacts without a redundant top header", () => {
   assert.match(html, /class="brand-mark whatsapp-mark"/);
   assert.match(html, /class="brand-mark viber-mark"/);
   assert.match(html, /mailto:sprehodkuzkov\.lj@gmail\.com/);
-  assert.match(html, /src="app\.js\?v=3" defer/);
+  assert.match(html, /src="app\.js\?v=4" defer/);
   assert.doesNotMatch(html, /privacyControls|privacyActions|Dovoli anonimno prepoznavanje/);
 });
 
@@ -132,4 +132,11 @@ test("WhatsApp is the prominent first option and the design is restrained", () =
   assert.match(html, /Sporočilo bo že pripravljeno/);
   assert.doesNotMatch(html, /radial-gradient|linear-gradient|class="eyebrow"/);
   assert.match(html, /class="flyer-panel"/);
+});
+
+test("public links have Italian messaging numbers and original calling number", () => {
+  assert.match(html, /href="https:\/\/wa\.me\/393282274551\?text=/);
+  assert.match(html, /href="viber:\/\/chat\?number=%2B393282274551"/);
+  assert.match(html, /href="tel:\+38670337710"/);
+  assert.match(html, /href="sms:\+38670337710"/);
 });
