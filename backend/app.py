@@ -454,7 +454,8 @@ def stats_rows():
             """
             SELECT
                 s.poster_id,
-                COALESCE(p.label, '') AS label,
+                COALESCE(l.name, p.label, '') AS label,
+                l.id AS location_id,
                 COUNT(*) AS scans,
                 MIN(s.scanned_at) AS first_scan,
                 MAX(s.scanned_at) AS last_scan,
@@ -466,6 +467,7 @@ def stats_rows():
                 ) AS scans_24h
             FROM scans s
             LEFT JOIN poster_labels p ON p.poster_id = s.poster_id
+            LEFT JOIN locations l ON l.id=p.location_id
             GROUP BY s.poster_id
             ORDER BY scans DESC, last_scan DESC
             """
@@ -528,11 +530,25 @@ def stats():
         STATS_CSS,
         stats_tabs("summary"),
         f"<h1>QR skeni</h1><p>Skupaj: <strong>{total}</strong></p>",
-        "<p><a href='/stats.csv'>Prenesi CSV</a></p>",
-        '<div class="table-wrap">',
-        "<table><thead><tr><th>Plakat</th><th>ID</th><th>Skeni</th><th>24 h</th><th>Prvi</th><th>Zadnji</th></tr></thead><tbody>",
+        "<p><a href='/stats.csv'>Prenesi statistiko CSV</a> · "
+        "<a href='/stats/flyers.csv'>Inventar flierjev CSV</a></p>",
+        "<h2>Lokacije</h2>",
+        '<div class="table-wrap"><table><thead><tr>'
+        "<th>Lokacija</th><th>Flierji</th><th>Skeni</th><th>24 h</th>"
+        "</tr></thead><tbody>",
     ]
-
+    for place in location_rows():
+        body.append(
+            f"<tr><td>{escape(place['name'])}</td>"
+            f"<td>{place['flyers']}/{place['capacity']}</td>"
+            f"<td>{place['scans']}</td><td>{place['scans_24h'] or 0}</td></tr>"
+        )
+    body.extend([
+        "</tbody></table></div>",
+        "<h2>Posamezni flierji</h2>",
+        '<div class="table-wrap">',
+        "<table><thead><tr><th>Lokacija</th><th>QR ID</th><th>Skeni</th><th>24 h</th><th>Prvi</th><th>Zadnji</th></tr></thead><tbody>",
+    ])
     for row in rows:
         body.append(
             "<tr>"
@@ -572,9 +588,10 @@ def stats_requests():
         page = min(requested_page, page_count)
         rows = conn.execute(
             f"""
-            SELECT r.*, COALESCE(p.label, '') AS label
+            SELECT r.*, COALESCE(l.name, p.label, '') AS label
             FROM scan_requests r
             LEFT JOIN poster_labels p ON p.poster_id = r.poster_id
+            LEFT JOIN locations l ON l.id=p.location_id
             {clause}
             ORDER BY r.requested_at DESC, r.id DESC
             LIMIT ? OFFSET ?
@@ -795,7 +812,7 @@ def stats_csv():
     out = io.StringIO()
     writer = csv.writer(out)
     writer.writerow(
-        ["poster_id", "label", "scans", "scans_24h", "first_scan_utc", "last_scan_utc"]
+        ["poster_id", "location", "scans", "scans_24h", "first_scan_utc", "last_scan_utc"]
     )
 
     for row in stats_rows():
