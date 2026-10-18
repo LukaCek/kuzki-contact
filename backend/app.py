@@ -304,6 +304,150 @@ def forget_browser():
 
 
 
+
+LOCATION_NAME_MAX = 80
+DEFAULT_FLIERS_PER_LOCATION = 15
+
+
+def validate_location_name(value):
+    name = (value or "").strip()
+    if (not 1 <= len(name) <= LOCATION_NAME_MAX
+            or any(ord(char) < 32 for char in name)):
+        return None
+    return name
+
+
+def make_flyer_id(conn):
+    # 96-bit random token; do not reuse an ID from older scan history.
+    for _ in range(12):
+        candidate = secrets.token_hex(12)
+        used = conn.execute(
+            """SELECT 1 FROM poster_labels WHERE poster_id=?
+               UNION SELECT 1 FROM scans WHERE poster_id=?
+               UNION SELECT 1 FROM scan_requests WHERE poster_id=?""",
+            (candidate, candidate, candidate),
+        ).fetchone()
+        if not used:
+            return candidate
+    raise RuntimeError("Failed to allocate a unique flyer identifier")
+
+
+def location_rows():
+    with db() as conn:
+        return conn.execute(
+            """SELECT l.id, l.name, l.capacity,
+                      COUNT(DISTINCT p.poster_id) AS flyers,
+                      COUNT(s.id) AS scans,
+                      SUM(CASE WHEN s.scanned_at >= CAST(strftime('%s','now') AS INTEGER)-86400
+                          THEN 1 ELSE 0 END) AS scans_24h
+               FROM locations l
+               LEFT JOIN poster_labels p ON p.location_id=l.id
+               LEFT JOIN scans s ON s.poster_id=p.poster_id
+               GROUP BY l.id
+               ORDER BY l.name COLLATE NOCASE"""
+        ).fetchall()
+
+
+def assign_flyer_to_location(conn, poster_id, name):
+    """Move/create one flyer, enforcing the 15-flyer limit atomically."""
+    location = conn.execute(
+        "SELECT id, capacity FROM locations WHERE name=? COLLATE NOCASE", (name,)
+    ).fetchone()
+    if location is None:
+        conn.execute(
+            "INSERT INTO locations(name,capacity,created_at) VALUES (?,15,?)",
+            (name, int(datetime.now(timezone.utc).timestamp())),
+        )
+        location = conn.execute(
+            "SELECT id, capacity FROM locations WHERE name=? COLLATE NOCASE", (name,)
+        ).fetchone()
+
+    old = conn.execute(
+        "SELECT location_id FROM poster_labels WHERE poster_id=?", (poster_id,)
+    ).fetchone()
+    if old is None or old["location_id"] != location["id"]:
+        used = conn.execute(
+            "SELECT COUNT(*) FROM poster_labels WHERE location_id=?", (location["id"],)
+        ).fetchone()[0]
+        if used >= location["capacity"]:
+            return False
+    conn.execute(
+        """INSERT INTO poster_labels(poster_id,label,location_id)
+           VALUES (?,?,?)
+           ON CONFLICT(poster_id) DO UPDATE
+           SET label=excluded.label, location_id=excluded.location_id""",
+        (poster_id, name, location["id"]),
+    )
+    return True
+
+
+@app.post("/stats/locations")
+@admin_required
+def create_location():
+    if not hmac.compare_digest(
+        (request.form.get("csrf") or "").encode("utf-8"),
+        csrf_token().encode("utf-8"),
+    ):
+        return Response("Neveljavno varnostno preverjanje.", status=403)
+    name = validate_location_name(request.form.get("name"))
+    if not name:
+        return Response("Neveljavno ime lokacije.", status=400)
+
+    mode = (request.form.get("mode") or "batch").strip()
+    if mode not in ("batch", "empty"):
+        return Response("Neveljaven način ustvarjanja.", status=400)
+    with db() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        if conn.execute(
+            "SELECT 1 FROM locations WHERE name=? COLLATE NOCASE", (name,)
+        ).fetchone():
+            return Response("Lokacija s tem imenom že obstaja.", status=409)
+        conn.execute(
+            """INSERT INTO locations(name,capacity,created_at)
+               VALUES (?,?,?)""",
+            (name, DEFAULT_FLIERS_PER_LOCATION, int(datetime.now(timezone.utc).timestamp())),
+        )
+        location_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+        if mode == "batch":
+            for _ in range(DEFAULT_FLIERS_PER_LOCATION):
+                poster_id = make_flyer_id(conn)
+                conn.execute(
+                    "INSERT INTO poster_labels(poster_id,label,location_id) VALUES (?,?,?)",
+                    (poster_id, name, location_id),
+                )
+    return redirect("/stats/posters", code=303)
+
+
+@app.get("/stats/flyers.csv")
+@admin_required
+def flyers_csv():
+    """Inventory export of QR destinations without triggering actual scans."""
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(["location", "flyer_id", "qr_url", "scans"])
+    with db() as conn:
+        rows = conn.execute(
+            """SELECT l.name AS location, p.poster_id,
+                      COUNT(s.id) AS scans
+               FROM poster_labels p
+               LEFT JOIN locations l ON l.id=p.location_id
+               LEFT JOIN scans s ON s.poster_id=p.poster_id
+               GROUP BY p.poster_id
+               ORDER BY l.name COLLATE NOCASE, p.poster_id"""
+        ).fetchall()
+    for row in rows:
+        writer.writerow([
+            row["location"] or "",
+            row["poster_id"],
+            "https://kuski.qd.je/?p=" + row["poster_id"],
+            row["scans"],
+        ])
+    return Response(
+        out.getvalue(), mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=kuzki-fliers.csv"},
+    )
+
+
 def stats_rows():
     with db() as conn:
         return conn.execute(
