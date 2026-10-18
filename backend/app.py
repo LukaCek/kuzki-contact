@@ -93,6 +93,49 @@ def db():
             "CREATE TABLE IF NOT EXISTS poster_labels ("
             "poster_id TEXT PRIMARY KEY, label TEXT NOT NULL)"
         )
+        # Location-based flyer inventory (v2), added without dropping
+        # scans, history or existing poster labels.
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS locations (
+                   id INTEGER PRIMARY KEY AUTOINCREMENT,
+                   name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                   capacity INTEGER NOT NULL DEFAULT 15 CHECK(capacity >= 1),
+                   created_at INTEGER NOT NULL
+               )"""
+        )
+        label_columns = {r[1] for r in conn.execute("PRAGMA table_info(poster_labels)")}
+        if "location_id" not in label_columns:
+            conn.execute("ALTER TABLE poster_labels ADD COLUMN location_id INTEGER REFERENCES locations(id)")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_poster_labels_location "
+            "ON poster_labels(location_id)"
+        )
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY)"
+        )
+        if not conn.execute("SELECT 1 FROM schema_migrations WHERE version=2").fetchone():
+            # Historical labels represented places. Group them by identical
+            # name and preserve each poster's existing scan statistics.
+            old_places = conn.execute(
+                """SELECT TRIM(label) AS name, COUNT(*) AS n
+                   FROM poster_labels
+                   WHERE TRIM(label) <> '' AND location_id IS NULL
+                   GROUP BY TRIM(label) COLLATE NOCASE"""
+            ).fetchall()
+            now = int(datetime.now(timezone.utc).timestamp())
+            for place in old_places:
+                conn.execute(
+                    """INSERT OR IGNORE INTO locations(name, capacity, created_at)
+                       VALUES (?, ?, ?)""",
+                    (place["name"], max(15, place["n"]), now),
+                )
+                conn.execute(
+                    """UPDATE poster_labels
+                       SET location_id=(SELECT id FROM locations WHERE name=? COLLATE NOCASE)
+                       WHERE TRIM(label)=? COLLATE NOCASE AND location_id IS NULL""",
+                    (place["name"], place["name"]),
+                )
+            conn.execute("INSERT INTO schema_migrations(version) VALUES (2)")
         conn.commit()
     except Exception:
         conn.rollback()
