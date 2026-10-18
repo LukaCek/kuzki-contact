@@ -7,6 +7,7 @@ import io
 import os
 import re
 import sqlite3
+import unicodedata
 from datetime import datetime, timezone
 from functools import wraps
 from html import escape
@@ -99,6 +100,7 @@ def db():
             """CREATE TABLE IF NOT EXISTS locations (
                    id INTEGER PRIMARY KEY AUTOINCREMENT,
                    name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                   name_key TEXT,
                    capacity INTEGER NOT NULL DEFAULT 15 CHECK(capacity >= 1),
                    created_at INTEGER NOT NULL
                )"""
@@ -136,6 +138,30 @@ def db():
                     (place["name"], place["name"]),
                 )
             conn.execute("INSERT INTO schema_migrations(version) VALUES (2)")
+        # Unicode-safe location names (SQLite NOCASE only handles ASCII).
+        loc_columns = {col[1] for col in conn.execute("PRAGMA table_info(locations)")}
+        if "name_key" not in loc_columns:
+            conn.execute("ALTER TABLE locations ADD COLUMN name_key TEXT")
+        if not conn.execute("SELECT 1 FROM schema_migrations WHERE version=3").fetchone():
+            for loc in conn.execute("SELECT id,name FROM locations ORDER BY id").fetchall():
+                key = unicodedata.normalize("NFC", loc["name"]).casefold()
+                existing = conn.execute(
+                    "SELECT id FROM locations WHERE name_key=? AND id<>?",
+                    (key, loc["id"]),
+                ).fetchone()
+                if existing:
+                    conn.execute(
+                        "UPDATE poster_labels SET location_id=? WHERE location_id=?",
+                        (existing["id"], loc["id"]),
+                    )
+                    conn.execute("DELETE FROM locations WHERE id=?", (loc["id"],))
+                else:
+                    conn.execute(
+                        "UPDATE locations SET name_key=? WHERE id=?",
+                        (key, loc["id"]),
+                    )
+            conn.execute("INSERT INTO schema_migrations(version) VALUES (3)")
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_locations_name_key ON locations(name_key)")
         conn.commit()
     except Exception:
         conn.rollback()
@@ -309,8 +335,12 @@ LOCATION_NAME_MAX = 80
 DEFAULT_FLIERS_PER_LOCATION = 15
 
 
+def location_key(name):
+    return unicodedata.normalize("NFC", name).casefold()
+
+
 def validate_location_name(value):
-    name = (value or "").strip()
+    name = unicodedata.normalize("NFC", (value or "").strip())
     if (not 1 <= len(name) <= LOCATION_NAME_MAX
             or any(ord(char) < 32 for char in name)):
         return None
@@ -351,15 +381,15 @@ def location_rows():
 def assign_flyer_to_location(conn, poster_id, name):
     """Move/create one flyer, enforcing the 15-flyer limit atomically."""
     location = conn.execute(
-        "SELECT id, capacity FROM locations WHERE name=? COLLATE NOCASE", (name,)
+        "SELECT id, capacity FROM locations WHERE name_key=?", (location_key(name),)
     ).fetchone()
     if location is None:
         conn.execute(
-            "INSERT INTO locations(name,capacity,created_at) VALUES (?,15,?)",
-            (name, int(datetime.now(timezone.utc).timestamp())),
+            "INSERT INTO locations(name,name_key,capacity,created_at) VALUES (?,?,15,?)",
+            (name, location_key(name), int(datetime.now(timezone.utc).timestamp())),
         )
         location = conn.execute(
-            "SELECT id, capacity FROM locations WHERE name=? COLLATE NOCASE", (name,)
+            "SELECT id, capacity FROM locations WHERE name_key=?", (location_key(name),)
         ).fetchone()
 
     old = conn.execute(
@@ -399,13 +429,14 @@ def create_location():
     with db() as conn:
         conn.execute("BEGIN IMMEDIATE")
         if conn.execute(
-            "SELECT 1 FROM locations WHERE name=? COLLATE NOCASE", (name,)
+            "SELECT 1 FROM locations WHERE name_key=?", (location_key(name),)
         ).fetchone():
             return Response("Lokacija s tem imenom že obstaja.", status=409)
         conn.execute(
-            """INSERT INTO locations(name,capacity,created_at)
-               VALUES (?,?,?)""",
-            (name, DEFAULT_FLIERS_PER_LOCATION, int(datetime.now(timezone.utc).timestamp())),
+            """INSERT INTO locations(name,name_key,capacity,created_at)
+               VALUES (?,?,?,?)""",
+            (name, location_key(name), DEFAULT_FLIERS_PER_LOCATION,
+             int(datetime.now(timezone.utc).timestamp())),
         )
         location_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
         if mode == "batch":
