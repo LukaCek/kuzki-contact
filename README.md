@@ -15,7 +15,7 @@ Ob odprtju stran:
 
 Zato refresh po prvem odprtju ne steje novega skena. Vsak scan ima se nakljucni `scan_id`, zato tudi ponovljen beacon istega odpiranja ni podvojen.
 
-Backend v SQLite hrani skene in dnevnik zahtevkov `POST /scan`:
+Backend v SQLite hrani lokacije, njihove flierje in dnevnik zahtevkov `POST /scan`:
 - ID plakata in nakljucni ID zahtevka,
 - cas zahtevka in rezultat (`counted`, `duplicate` ali `invalid_*`),
 - HTTP status.
@@ -153,23 +153,64 @@ docker compose up -d --build
 ```
 
 
-## Poimenovanje plakatov
+## Lokacije, flierji in statistika (15 na lokacijo)
 
-V zaščiteni administraciji **https://qr-pski-skenirano.cekluka.com/stats/posters**
-je tretji zavihek **Plakati**. Tapni **+ Dodaj flier**, vpiši
-lokacijo (npr. `Knjižnica CTK`), nato izberi **Odpri kamero in skeniraj QR**.
-Ko kamera prebere QR-kodo fizičnega plakata, se njen identifikator
-`?p=abc123` poveže z imenom. Skener QR-kode **ne odpre** in zato
-**ne ustvari lažnega skeniranja**. Če kamera ni na voljo, lahko v istem
-okencu uporabiš fotografijo ali prilepiš celotni naslov QR-kode.
-Če QR-koda nima parametra `?p=ID`, je treba plakat opremiti z novo
-sledljivo QR-kodo, preden jo lahko dodaš s skenerjem.
+Model podatkov: **lokacija (ime)** -> **do 15 flierjev** -> **QR ID vsakega flierja** -> **zgodovina skenov**.
+QR-ID in njegov URL ostaneta takšna kot doslej: `https://kuski.qd.je/?p=ID`.
+Ime lokacije je povezano z ID-jem **na backendu**; ni treba spreminjati
+QR naslova, ker se lokacija razreši iz baze. Če želiš ime lokacije tudi
+natisniti na flier, ga prenesi iz CSV inventarja in vključi v pripravo
+za tisk; HTML kontaktne strani ne dodaja lokacije na sliko plakata.
 
-V tabeli sta samo ime in ID kode (klikljiva povezava
-**Odpri QR povezavo** je odstranjena). Obstoječe ime je mogoče
-spremeniti z obrazcem **Shrani**, ne da bi spreminjali QR-kodo.
-Ime je vidno v **Pregledu**, **Posameznih zahtevkih** in izvozu CSV.
-Obstoječi skeni in podatki ostanejo v SQLite volumnu.
+V zaščiteni administraciji
+`https://qr-pski-skenirano.cekluka.com/stats/posters`:
+
+1. **Dodaj lokacijo**: vpiši ime (npr. Knjižnica CTK).
+   - **Ustvari 15 flierjev**: sistem ustvari 15 različnih kriptografsko
+     naključnih QR-ID-jev, povezanih s to lokacijo.
+   - **Samo lokacijo**: ustvari prazno lokacijo, če že imaš natisnjene
+     unikatne QR-kode in jih želiš dodati s kamero.
+2. **+ Dodaj flier**: izberi/vpiši lokacijo in skeniraj QR. Skener
+   **ne odpre QR povezave** in zato ne poveča števila obiskov.
+   Podpira tudi fotografijo ali lepljenje povezave.
+3. V tabeli lahko spremeniš lokacijo posameznega flierja.
+   Če ima ciljna lokacija že 15 registriranih flierjev, backend vrne
+   HTTP **409** in spremembe ne izvede. Pri ponovnem vpisu istega flierja
+   se število ne poveča.
+
+**Inventar CSV:** `/stats/flyers.csv` (za prijavljenega administratorja):
+`location,flyer_id,qr_url,scans`. To je podlaga za pripravo 15
+različnih fizičnih flierjev za tisk. V CSV niso obiskani URL-ji in
+izvoz ne povzroči novih skenov.
+
+**Pregled:** `/stats` prikazuje posebej (a) skupne skene po lokaciji in
+število njenih flierjev ter (b) skene za vsak posamezen QR-ID.
+`/stats/requests` prikazuje pripadajoče ime lokacije v posameznem
+zahtevku, `/stats.csv` pa ima stolpec `location`.
+Če flier premakneš na drugo lokacijo, statistika njegovo dosedanjo
+zgodovino prikaže pod **trenutno** lokacijo.
+
+**Migracija stare baze:** Ob prvem zagonu se doda tabela `locations`
+in stolpec `poster_labels.location_id`; stare oznake se samodejno
+pretvorijo v lokacije in dodelijo obstoječim QR-ID-jem. Stari skeni
+in logi zahtevkov ostanejo. Lokacije primerjamo z Unicode NFC/casefold
+(npr. `Knjižnica CTK` in `KNJIŽNICA CTK` se ne podvojita).
+`scan-data` Docker volume se ne briše.
+
+### Namestitev
+
+```bash
+cd ~/docker/kuzki-contact
+git pull --ff-only
+cd backend
+docker compose up -d --build
+docker compose ps
+```
+
+Preveri `/stats/posters`; za dodatno preverjanje lahko v repozitoriju
+zaženeš `python -m unittest discover -s backend/tests -v`, če imaš
+nameščene Python odvisnosti. Pred prvo nadgradnjo je priporočljiva
+varnostna kopija Docker volumna z bazo.
 
 ## Metapodatki in povezovanje obiskov
 
