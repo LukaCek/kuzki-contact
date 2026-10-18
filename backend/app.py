@@ -683,49 +683,88 @@ def stats_posters():
     token = csrf_token()
     with db() as conn:
         rows = conn.execute(
-            """
-            SELECT ids.poster_id, COALESCE(p.label, '') AS label,
-                   COUNT(s.id) AS scans
-            FROM (SELECT poster_id FROM scans
-                  UNION SELECT poster_id FROM poster_labels) ids
-            LEFT JOIN poster_labels p ON p.poster_id = ids.poster_id
-            LEFT JOIN scans s ON s.poster_id = ids.poster_id
-            GROUP BY ids.poster_id
-            ORDER BY label COLLATE NOCASE, ids.poster_id
-            """
+            """SELECT ids.poster_id,
+                      COALESCE(l.name,p.label,'') AS label,
+                      COALESCE(l.name,'') AS location,
+                      COUNT(s.id) AS scans
+               FROM (SELECT poster_id FROM scans
+                     UNION SELECT poster_id FROM poster_labels) ids
+               LEFT JOIN poster_labels p ON p.poster_id=ids.poster_id
+               LEFT JOIN locations l ON l.id=p.location_id
+               LEFT JOIN scans s ON s.poster_id=ids.poster_id
+               GROUP BY ids.poster_id
+               ORDER BY l.name COLLATE NOCASE, ids.poster_id"""
         ).fetchall()
+    places = location_rows()
     body = [
         "<!doctype html><meta charset='utf-8'>",
         "<meta name='viewport' content='width=device-width,initial-scale=1'>",
-        "<title>Plakati in oznake</title>", STATS_CSS, stats_tabs("posters"),
-        "<h1>Poimenovanje plakatov</h1>",
-        "<p class='muted'>Ime lahko spremeniš, ne da bi spreminjal QR-kodo.</p>",
-        '<div class="panel">'
-        '<button type="button" id="open-flier-scanner">+ Dodaj flier</button>'
-        '<p class="muted">Vpiši ime lokacije in skeniraj QR-kodo na plakatu. '
-        'Skeniranje v administraciji ne poveča števila obiskov.</p></div>',
+        "<title>Flierji po lokacijah</title>",
+        STATS_CSS,
+        stats_tabs("posters"),
+        "<h1>Lokacije in flierji</h1>",
+        "<p class='muted'>Za vsako lokacijo načrtujemo 15 fizičnih flierjev. "
+        "Vsak ima svoj QR ID; skene štejemo posebej in skupno po lokaciji.</p>",
+        '<div class="panel"><h2>Dodaj lokacijo</h2>',
+        '<form method="post" action="/stats/locations" class="inline">',
+        f'<input type="hidden" name="csrf" value="{token}">',
+        '<input type="text" name="name" maxlength="80" required '
+        'placeholder="npr. Knjižnica CTK" aria-label="Ime lokacije">',
+        '<button name="mode" value="batch" type="submit">Ustvari 15 flierjev</button>',
+        '<button name="mode" value="empty" type="submit">Samo lokacijo</button>',
+        '</form>',
+        '<p class="muted">Če imaš 15 že natisnjenih QR-kod, izberi '
+        '»Samo lokacijo« in jih dodaj s kamero. Pri novih kodah '
+        'izberi »Ustvari 15 flierjev« in prenesi inventar CSV.</p></div>',
+        '<div class="panel">',
+        '<button type="button" id="open-flier-scanner">+ Dodaj flier</button>',
+        '<p class="muted">Skeniraj QR-kodo fizičnega flierja in določi lokacijo. '
+        'Ta postopek ne šteje kot obisk.</p></div>',
+        '<p><a href="/stats/flyers.csv">Prenesi inventar flierjev (CSV)</a></p>',
+        '<h2>Pregled lokacij</h2>',
         '<div class="table-wrap"><table><thead><tr>',
-        '<th>Ime</th><th>QR ID</th><th>Skeni</th><th>Spremeni ime</th>',
+        '<th>Lokacija</th><th>Flierjev</th><th>Skeni</th>',
         '</tr></thead><tbody>',
     ]
+    for place in places:
+        body.append(
+            f"<tr><td><strong>{escape(place['name'])}</strong></td>"
+            f"<td>{place['flyers']} / {place['capacity']}</td>"
+            f"<td>{place['scans']}</td></tr>"
+        )
+    if not places:
+        body.append('<tr><td colspan="3">Še ni lokacij.</td></tr>')
+    body.extend([
+        '</tbody></table></div>',
+        '<h2>Posamezni flierji</h2>',
+        '<div class="table-wrap"><table><thead><tr>',
+        '<th>Lokacija</th><th>QR ID</th><th>Skeni</th><th>Premakni / določi lokacijo</th>',
+        '</tr></thead><tbody>',
+    ])
     for row in rows:
         code = escape(row["poster_id"])
         name = escape(row["label"])
+        location = escape(row["location"])
         body.append(
             "<tr>"
-            f"<td><span class='label'>{name or '—'}</span></td>"
+            f"<td><span class='label'>{location or 'Brez lokacije'}</span></td>"
             f"<td><code>{code}</code></td>"
             f"<td>{row['scans']}</td>"
             '<td><form method="post" action="/stats/posters" class="inline">'
             f'<input type="hidden" name="csrf" value="{token}">'
             f'<input type="hidden" name="poster_id" value="{code}">'
-            f'<input name="label" value="{name}" maxlength="80" required aria-label="Ime">'
+            f'<input name="label" list="existing-locations" value="{name}" '
+            'maxlength="80" required aria-label="Lokacija flierja">'
             '<button type="submit">Shrani</button></form></td>'
             "</tr>"
         )
     if not rows:
-        body.append("<tr><td colspan='4'>Ni plakatov.</td></tr>")
+        body.append("<tr><td colspan='4'>Ni flierjev.</td></tr>")
     body.append("</tbody></table></div>")
+    body.append('<datalist id="existing-locations">')
+    for place in places:
+        body.append(f'<option value="{escape(place["name"])}"></option>')
+    body.append("</datalist>")
     body.extend([
         '<style>'
         '.flier-dialog{border:0;border-radius:18px;box-shadow:0 18px 90px #0003;'
@@ -753,8 +792,8 @@ def stats_posters():
         '<p class="muted">1. Vpiši ime lokacije. 2. S kamero preberi QR-kodo '
         'na plakatu. Ime se samodejno shrani brez odpiranja QR povezave.</p>',
         '<label for="flier-name">Ime / lokacija</label>',
-        '<input type="text" id="flier-name" name="label" required maxlength="80" '
-        'placeholder="Knjižnica CTK" autocomplete="off">',
+        '<input type="text" id="flier-name" name="label" list="existing-locations" '
+        'required maxlength="80" placeholder="Knjižnica CTK" autocomplete="off">',
         '<div class="actions"><button type="button" id="flier-open-camera">'
         'Odpri kamero in skeniraj QR</button></div>',
         '<div id="flier-reader" hidden></div>',
@@ -781,28 +820,17 @@ def rename_poster():
     if not hmac.compare_digest(provided, csrf_token().encode("utf-8")):
         return Response("Neveljavno varnostno preverjanje.", status=403)
     poster_id = (request.form.get("poster_id") or "").strip()
-    label = (request.form.get("label") or "").strip()
-    if not poster_id:
-        # Reserve a fresh ID that has not appeared in previous scans.
-        with db() as conn:
-            while True:
-                poster_id = secrets.token_hex(3)
-                occupied = conn.execute(
-                    """SELECT 1 FROM poster_labels WHERE poster_id=?
-                       UNION SELECT 1 FROM scans WHERE poster_id=?""",
-                    (poster_id, poster_id),
-                ).fetchone()
-                if not occupied:
-                    break
-    if (not POSTER_ID_RE.fullmatch(poster_id) or not 1 <= len(label) <= 80
-            or any(ord(char) < 32 for char in label)):
-        return Response("Neveljaven ID ali ime plakata.", status=400)
+    label = validate_location_name(request.form.get("label"))
+    if not label:
+        return Response("Neveljavno ime lokacije.", status=400)
+    if poster_id and not POSTER_ID_RE.fullmatch(poster_id):
+        return Response("Neveljaven ID flierja.", status=400)
     with db() as conn:
-        conn.execute(
-            """INSERT INTO poster_labels (poster_id, label) VALUES (?, ?)
-               ON CONFLICT(poster_id) DO UPDATE SET label=excluded.label""",
-            (poster_id, label),
-        )
+        conn.execute("BEGIN IMMEDIATE")
+        if not poster_id:
+            poster_id = make_flyer_id(conn)
+        if not assign_flyer_to_location(conn, poster_id, label):
+            return Response("Na tej lokaciji je že 15 flierjev.", status=409)
     return redirect("/stats/posters", code=303)
 
 
